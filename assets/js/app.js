@@ -245,6 +245,14 @@ function feedNode(ev) {
   const plus = document.createElement('span');
   plus.className = 'plus';
   plus.textContent = ev.seconds > 0 ? '+' + fmt(ev.seconds).replace(/^00:/, '') : '—';
+  if (ev.capped) {
+    plus.classList.add('is-capped');
+    plus.title = `المطلوب ${human(ev.requested)} — الحد الأعلى سمح بـ ${human(ev.seconds)}`;
+    const badge = document.createElement('i');
+    badge.className = 'cap-badge';
+    badge.textContent = 'سقف';
+    plus.append(badge);
+  }
 
   li.append(av, meta, plus);
   return li;
@@ -282,8 +290,22 @@ function applyEvent(ev) {
   state.seen.add(ev.id);
 
   const cap = state.settings.maxHours * 3600;
-  const added = state.timer.add(ev.seconds, cap);
+  const requested = Math.max(0, Number(ev.seconds) || 0);
+  const added = state.timer.add(requested, cap);
+
+  // نحفظ المطلوب والمضاف — عشان ما نقص الوقت بصمت
+  ev.requested = requested;
   ev.seconds = added;
+  ev.capped = requested > added + 0.5;
+  ev.capSeconds = cap;
+
+  if (ev.capped) {
+    ev.detail += ` · وصل للسقف (${human(cap)})`;
+    toast(
+      `الحد الأعلى منع ${human(requested - added)} — ارفع «الحد الأعلى» في الإعدادات`,
+      'err'
+    );
+  }
 
   if (ev.kind === 'sub' || ev.kind === 'resub' || ev.kind === 'gift') state.stats.subs += 1;
   if (ev.kind === 'bits') state.stats.bits += Math.round(ev.amount || 0);
@@ -662,6 +684,12 @@ function curLabel() {
   return state.settings.currencyLabel || 'دولار';
 }
 
+function curCode() {
+  return (
+    { دولار: 'USD', ريال: 'SAR', درهم: 'AED', دينار: 'KWD' }[curLabel()] || 'SAR'
+  );
+}
+
 function renderRateExample() {
   const box = $('#rateExample');
   if (!box) return;
@@ -676,6 +704,65 @@ function renderRateExample() {
   box.innerHTML = [sample(5), '<span class="rh-sep">·</span>', sample(20)].join('');
 }
 
+/** تحذير واضح إذا كان السقف يمنع الزيادة */
+function updateCapHint() {
+  const el = $('#capHint');
+  if (!el) return;
+  const cap = state.settings.maxHours * 3600;
+  const start = state.settings.startMin * 60;
+
+  if (cap <= start) {
+    el.className = 'hint warn';
+    el.textContent = `الحد الأعلى (${human(cap)}) أصغر من وقت البداية (${human(start)}) — العدّاد ما يقدر يزيد إطلاقًا. ارفعه.`;
+  } else if (cap < start * 3) {
+    el.className = 'hint warn';
+    el.textContent = `الحد الأعلى ${human(cap)} فقط — أي دعم يوصلك لهذا الرقم يتوقف عنده والباقي يُلغى.`;
+  } else {
+    el.className = 'hint';
+    el.textContent = `أي دعم يوصل الوقت إلى ${human(cap)} يتوقف عنده.`;
+  }
+}
+
+/** حاسبة تحقق: تمرّر المبلغ بنفس مسار الأحداث الحقيقي */
+function runCalc() {
+  const out = $('#calcOut');
+  if (!out) return;
+  const amt = Number($('#calcAmt')?.value);
+  if (!(amt > 0)) {
+    out.innerHTML = '<div class="co-empty">اكتب مبلغًا عشان تشوف كم يعطي بالضبط.</div>';
+    return;
+  }
+
+  const ev = normalize(
+    {
+      type: 'donation',
+      for: 'streamlabs',
+      message: [{ name: 'اختبار', amount: String(amt), currency: curCode(), _id: 'calc' }],
+    },
+    state.settings
+  )[0];
+
+  const cap = state.settings.maxHours * 3600;
+  const current = state.timer.remaining;
+  const room = Math.max(0, cap - current);
+  const actual = Math.min(ev.seconds, room);
+  const rule = (state.settings.donationRules || []).find(
+    (r) => Math.abs(Number(r.amount) - amt) < 0.01
+  );
+
+  out.innerHTML = `
+    <div class="co-line"><span>المبلغ المقروء</span><b>${ev.amountLabel}</b></div>
+    <div class="co-line"><span>يُحسب بـ</span><b>${rule ? 'قاعدة مخصصة' : 'المعدل العام'}</b></div>
+    <div class="co-line"><span>الوقت المستحق</span><b>+${human(ev.seconds)}</b></div>
+    <div class="co-line${actual < ev.seconds ? ' bad' : ''}"><span>سيُضاف فعليًا</span><b>+${human(actual)}</b></div>
+    ${
+      actual < ev.seconds
+        ? `<div class="co-warn">السقف ${human(cap)} يمنع ${human(ev.seconds - actual)} — الوقت الحالي ${human(current)}</div>`
+        : ''
+    }
+  `;
+}
+
 function bindRates() {
   // وقت البداية والحد الأعلى
   $('#setStart')?.addEventListener('change', (e) => {
@@ -683,6 +770,7 @@ function bindRates() {
     e.target.value = v;
     state.settings.startMin = v;
     if (!state.timer.running && state.timer.added === 0) state.timer.reset(v * 60);
+    updateCapHint();
     renderTimer();
     persist();
   });
@@ -690,6 +778,7 @@ function bindRates() {
     const v = Math.max(1, Number(e.target.value) || 1);
     e.target.value = v;
     state.settings.maxHours = v;
+    updateCapHint();
     persist();
   });
 
@@ -750,6 +839,16 @@ function renderRules() {
     const sec = document.createElement('span');
     sec.className = 'r-sec';
     sec.textContent = human(r.seconds);
+
+    // تحذير لو القاعدة تعطي أقل من المعدل العام — مصدر شائع للأرقام "الغلط"
+    const general = Math.round(Number(r.amount) * (Number(state.settings.perDonation) || 0));
+    if (general > 0 && r.seconds < general - 0.5) {
+      const warn = document.createElement('i');
+      warn.className = 'r-warn';
+      warn.textContent = 'أقل من العام';
+      warn.title = `المعدل العام يعطي ${human(general)} لهذا المبلغ`;
+      sec.append(warn);
+    }
 
     const del = document.createElement('button');
     del.className = 'r-del';
@@ -980,6 +1079,7 @@ function bind() {
     state.settings.currencyLabel = $('#donCur').value;
     renderRateExample();
     renderRules();
+    runCalc();
     persist();
   });
 
@@ -1118,6 +1218,9 @@ function bind() {
     btn.addEventListener('click', () => fireTest(btn.dataset.test));
   });
 
+  $('#btnCalc')?.addEventListener('click', runCalc);
+  $('#calcAmt')?.addEventListener('input', runCalc);
+
   $('#btnClearRaw')?.addEventListener('click', () => {
     state.raw = [];
     state.rawCount = 0;
@@ -1162,6 +1265,8 @@ function fillSettings() {
   const dc = $('#donCur');
   if (dc) dc.value = s.currencyLabel || 'دولار';
   renderRateExample();
+  updateCapHint();
+  runCalc();
   set('#setToken', '');
   $('#swSound')?.classList.toggle('on', s.sound);
   $('#swAlert')?.classList.toggle('on', s.alert);

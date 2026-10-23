@@ -376,6 +376,7 @@
           </div>
         </div>
       </div>
+      <div class="hint" id="capHint"></div>
     </div>
 
     <!-- ٢ · كم يزيد الوقت؟ -->
@@ -606,6 +607,13 @@
         <button class="btn ghost xs" data-test="gift">هدية تجريبية</button>
         <button class="btn ghost xs" data-test="donation">دونيشن تجريبي</button>
       </div>
+
+      <label class="form-label" style="margin-top:16px">اختبر أي مبلغ قبل البث</label>
+      <div class="calc-row">
+        <input class="input" id="calcAmt" type="number" min="0" step="0.5" placeholder="مثال: 100" />
+        <button class="btn ghost xs" id="btnCalc">احسب</button>
+      </div>
+      <div class="calc-out" id="calcOut"></div>
     </div>
 
     <!-- ٧ · التوكن -->

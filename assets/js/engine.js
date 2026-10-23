@@ -50,17 +50,74 @@ const CUR_SYMBOL = {
   OMR: 'ريال', EGP: 'ج.م', JOD: 'دينار', EUR: '€', GBP: '£', TRY: '₺',
 };
 
+const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+
+/**
+ * يقرأ أي صيغة مبلغ بشكل صحيح:
+ * "1,000.00" · "$1,234.56" · "100.00 SAR" · "١٠٠" · "1.234,56" · "100,5" · 100
+ * parseFloat المباشر يقرأ "1,000.00" كـ 1 — وهذا كان يخسّرنا ٩٩٪ من المبلغ.
+ */
+export function parseAmount(raw) {
+  if (typeof raw === 'number') return isFinite(raw) ? raw : 0;
+  if (raw == null) return 0;
+
+  let s = String(raw).trim();
+  if (!s) return 0;
+
+  // أرقام عربية وفارسية → لاتينية
+  s = s.replace(/[٠-٩]/g, (d) => String(AR_DIGITS.indexOf(d)));
+  s = s.replace(/[۰-۹]/g, (d) => String(FA_DIGITS.indexOf(d)));
+
+  // نُبقي الأرقام والفواصل فقط
+  s = s.replace(/[^\d.,-]/g, '');
+  if (!s) return 0;
+
+  const hasComma = s.includes(',');
+  const hasDot = s.includes('.');
+
+  if (hasComma && hasDot) {
+    // الأخير هو العشري، والآخر فاصل آلاف
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(/,/g, '');
+  } else if (hasComma) {
+    const parts = s.split(',');
+    // "1,234" آلاف · "12,50" عشري
+    const last = parts[parts.length - 1];
+    if (parts.length === 2 && last.length === 3 && parts[0].length > 0 && parts[0].length <= 3) {
+      s = parts.join('');
+    } else if (parts.length > 2) {
+      s = parts.join('');
+    } else {
+      s = parts.join('.');
+    }
+  } else if (hasDot) {
+    // "1.234.567" آلاف أوروبية
+    if (s.split('.').length > 2) s = s.replace(/\./g, '');
+  }
+
+  const n = parseFloat(s);
+  return isFinite(n) ? n : 0;
+}
+
+/** يعرض المبلغ مع عملته — ويضمن أن المعروض = المحسوب */
 export function money(amount, currency, formatted) {
+  const n = parseAmount(amount);
   const f = formatted ? String(formatted).trim() : '';
-  if (f && /\d/.test(f)) return f;
+  const fn = f ? parseAmount(f) : NaN;
 
-  const n = Number(amount);
-  if (!isFinite(n) || n === 0) return f || '0';
+  // نستخدم الصيغة الجاهزة فقط إذا كانت تطابق الرقم الحقيقي
+  if (f && /\d/.test(f) && isFinite(fn) && Math.abs(fn - n) < 0.011) return f;
 
-  const code = String(currency || '').toUpperCase();
-  const sym = CUR_SYMBOL[code] || (code ? code : '');
-  const num = Number.isInteger(n) ? String(n) : n.toFixed(2);
-  return sym ? `${num} ${sym}` : num;
+  // غير كذا نبني العرض من الرقم نفسه — عشان ما يقول ٦٠ وهو ١٠٠
+  if (n !== 0) {
+    const code = String(currency || '').toUpperCase();
+    const sym = CUR_SYMBOL[code] || code;
+    const num = Number.isInteger(n) ? String(n) : n.toFixed(2);
+    return sym ? `${num} ${sym}` : num;
+  }
+
+  return f || '0';
 }
 
 /** يحوّل رسالة Streamlabs إلى أحداث موحّدة */
@@ -105,20 +162,20 @@ export function normalize(payload, st) {
           ? `تجديد ${m.months || 1} شهر`
           : 'سبسكريب جديد';
     } else if (type === 'bits') {
-      const bits = parseFloat(m.amount) || 0;
+      const bits = parseAmount(m.amount) || 0;
       kind = 'bits';
       seconds = Math.round((bits / 100) * st.perBits);
       amountLabel = `${bits.toLocaleString('en-US')} بتس`;
       detail = amountLabel;
     } else if (type === 'donation') {
-      const amt = parseFloat(m.amount) || 0;
+      const amt = parseAmount(m.amount) || 0;
       const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'donation';
       seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
       amountLabel = money(amt, m.currency, m.formatted_amount);
       detail = `${amountLabel} دونيشن${rule ? ' · قاعدة مخصصة' : ''}`;
     } else if (type === 'superchat') {
-      const amt = (parseFloat(m.amount) || 0) / 1e6;
+      const amt = (parseAmount(m.amount) || 0) / 1e6;
       const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'superchat';
       seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
@@ -126,12 +183,12 @@ export function normalize(payload, st) {
       detail = `${amountLabel} سوبر شات${rule ? ' · قاعدة مخصصة' : ''}`;
     } else if (type === 'gift') {
       // هدايا تيك توك: الماسات × عدد التكرار
-      const diamonds = Number(
+      const diamonds = parseAmount(
         m.diamond_count ?? m.diamonds ?? m.diamondCount ?? m.diamond ?? 0
-      ) || 0;
-      const repeat = Number(m.repeat_count ?? m.repeatCount ?? 1) || 1;
+      );
+      const repeat = parseAmount(m.repeat_count ?? m.repeatCount ?? 1) || 1;
       const total = diamonds * repeat;
-      const amt = parseFloat(m.amount) || 0;
+      const amt = parseAmount(m.amount) || 0;
       const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
 
       kind = 'gift';
@@ -177,7 +234,7 @@ export function normalize(payload, st) {
       detail,
       amountLabel,
       seconds,
-      amount: parseFloat(m.amount) || 0,
+      amount: parseAmount(m.amount) || 0,
       currency: m.currency || '',
       ts: Date.now(),
     });
