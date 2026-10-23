@@ -33,7 +33,7 @@ const state = {
   timer: new Timer(saved.timer || {}),
   events: Array.isArray(saved.events) ? saved.events : [],
   seen: new Set(Array.isArray(saved.seen) ? saved.seen : []),
-  stats: saved.stats || { subs: 0, bits: 0, don: 0, min: 0 },
+  stats: { subs: 0, bits: 0, don: 0, min: 0, money: 0, ...(saved.stats || {}) },
   conn: 'idle',
   demo: false,
   lastSeen: Number(saved.lastSeen) || 0,
@@ -272,6 +272,8 @@ function renderStats() {
   set('#statBits', state.stats.bits.toLocaleString('en-US'));
   set('#statDon', state.stats.don.toLocaleString('en-US'));
   set('#statMin', Math.round(state.stats.min).toLocaleString('en-US'));
+  const mny = Number(state.stats.money) || 0;
+  set('#statMoney', mny > 0 ? (Number.isInteger(mny) ? mny : mny.toFixed(2)) : '٠');
 }
 
 /* ─────────────── تطبيق الأحداث ─────────────── */
@@ -285,7 +287,10 @@ function applyEvent(ev) {
 
   if (ev.kind === 'sub' || ev.kind === 'resub' || ev.kind === 'gift') state.stats.subs += 1;
   if (ev.kind === 'bits') state.stats.bits += Math.round(ev.amount || 0);
-  if (ev.kind === 'donation' || ev.kind === 'superchat') state.stats.don += 1;
+  if (ev.kind === 'donation' || ev.kind === 'superchat') {
+    state.stats.don += 1;
+    state.stats.money = (Number(state.stats.money) || 0) + (Number(ev.amount) || 0);
+  }
   state.stats.min += added / 60;
 
   state.events.unshift(ev);
@@ -627,6 +632,103 @@ async function submitLock() {
 }
 
 /* ─────────────── قواعد الدونيشن ─────────────── */
+/* ─────────────── المعدلات والوحدات ─────────────── */
+const RATES = [
+  { key: 'perDonation', input: '#setDon', unit: '#unitDon' },
+  { key: 'perFollow', input: '#setFollow', unit: '#unitFollow' },
+  { key: 'perShare', input: '#setShare', unit: '#unitShare' },
+  { key: 'perDiamond', input: '#setDiamond', unit: '#unitDiamond' },
+  { key: 'perLike', input: '#setLike', unit: '#unitLike' },
+  { key: 'perSub', input: '#setSub', unit: '#unitSub' },
+  { key: 'perGift', input: '#setGift', unit: '#unitGift' },
+  { key: 'perBits', input: '#setBits', unit: '#unitBits' },
+];
+
+/** ثواني → رقم بالوحدة المختارة */
+function toUnit(sec, u) {
+  const n = (Number(sec) || 0) / (u || 1);
+  return String(Math.round(n * 100) / 100);
+}
+
+/** اختيار وحدة مناسبة تلقائيًا */
+function autoUnit(sec) {
+  const s = Number(sec) || 0;
+  if (s >= 3600 && s % 3600 === 0) return 3600;
+  if (s >= 60 && s % 60 === 0) return 60;
+  return 1;
+}
+
+function curLabel() {
+  return state.settings.currencyLabel || 'دولار';
+}
+
+function renderRateExample() {
+  const box = $('#rateExample');
+  if (!box) return;
+  const rate = Number(state.settings.perDonation) || 0;
+  const cur = curLabel();
+
+  const sample = (v) => {
+    const sec = Math.round(v * rate);
+    return `<span class="rh-s"><i>${v}</i> ${cur}</span><span class="rh-arrow">=</span><b>${sec > 0 ? '+' + human(sec) : 'ما يزيد'}</b>`;
+  };
+
+  box.innerHTML = [sample(5), '<span class="rh-sep">·</span>', sample(20)].join('');
+}
+
+function bindRates() {
+  // وقت البداية والحد الأعلى
+  $('#setStart')?.addEventListener('change', (e) => {
+    const v = Math.max(1, Number(e.target.value) || 1);
+    e.target.value = v;
+    state.settings.startMin = v;
+    if (!state.timer.running && state.timer.added === 0) state.timer.reset(v * 60);
+    renderTimer();
+    persist();
+  });
+  $('#setMax')?.addEventListener('change', (e) => {
+    const v = Math.max(1, Number(e.target.value) || 1);
+    e.target.value = v;
+    state.settings.maxHours = v;
+    persist();
+  });
+
+  RATES.forEach(({ key, input, unit }) => {
+    const el = $(input);
+    const ue = $(unit);
+    if (!el) return;
+
+    const commit = () => {
+      const u = Number(ue?.value) || 1;
+      const v = Math.max(0, Number(el.value) || 0);
+      state.settings[key] = Math.round(v * u);
+      if (ue) state.settings.units = { ...(state.settings.units || {}), [key]: u };
+      el.closest('.rate-row')?.classList.toggle('is-zero', state.settings[key] === 0);
+      renderRateExample();
+      renderTimer();
+      persist();
+    };
+
+    el.addEventListener('change', commit);
+    el.addEventListener('input', () => { if (key === 'perDonation') renderRateExample(); });
+
+    ue?.addEventListener('change', () => {
+      // نحوّل الرقم المكتوب حاليًا للوحدة الجديدة بدون ما نضيّع قيمة المستخدم
+      const prevUnit = Number((state.settings.units || {})[key]) || autoUnit(Number(state.settings[key]) || 0);
+      const typed = Number(el.value) || 0;
+      const u = Number(ue.value) || 1;
+      const secs = Math.round(typed * prevUnit);
+
+      state.settings[key] = secs;
+      state.settings.units = { ...(state.settings.units || {}), [key]: u };
+      el.value = toUnit(secs, u);
+      el.closest('.rate-row')?.classList.toggle('is-zero', secs === 0);
+      renderRateExample();
+      persist();
+    });
+  });
+}
+
 function renderRules() {
   const list = $('#rulesList');
   if (!list) return;
@@ -639,7 +741,7 @@ function renderRules() {
 
     const amt = document.createElement('span');
     amt.className = 'r-amt';
-    amt.textContent = String(r.amount);
+    amt.textContent = `${r.amount} ${curLabel()}`;
 
     const eq = document.createElement('span');
     eq.textContent = '=';
@@ -667,8 +769,11 @@ function renderRules() {
 
 function addRule() {
   const a = Number($('#ruleAmount').value);
-  const s = Number($('#ruleSeconds').value);
-  if (!(a > 0) || !(s > 0)) return toast('أدخل مبلغًا وثواني صحيحة', 'err');
+  const raw = Number($('#ruleSeconds').value);
+  const unit = Number($('#ruleUnit')?.value) || 60;
+  const s = Math.round(raw * unit);
+
+  if (!(a > 0) || !(raw > 0)) return toast('أدخل مبلغًا ووقتًا صحيحين', 'err');
 
   const exists = state.settings.donationRules.find((r) => Math.abs(r.amount - a) < 0.01);
   if (exists) exists.seconds = s;
@@ -678,7 +783,7 @@ function addRule() {
   $('#ruleSeconds').value = '';
   renderRules();
   persist();
-  toast('تمت إضافة القاعدة', 'ok');
+  toast(`${a} ${curLabel()} = +${human(s)}`, 'ok');
 }
 
 /* ─────────────── شكل الأوفرلاي ─────────────── */
@@ -809,7 +914,7 @@ function bind() {
 
   $('#btnReset')?.addEventListener('click', () => {
     state.timer.reset(state.settings.startMin * 60);
-    state.stats = { subs: 0, bits: 0, don: 0, min: 0 };
+    state.stats = { subs: 0, bits: 0, don: 0, min: 0, money: 0 };
     state.events = [];
     state.seen.clear();
     renderTimer();
@@ -869,32 +974,13 @@ function bind() {
   $('#btnCopyOverlay')?.addEventListener('click', () => copy($('#overlayUrl').value, 'تم نسخ رابط الأوفرلاي'));
   $('#btnCopyWatch')?.addEventListener('click', () => copy($('#watchUrl').value, 'تم نسخ رابط المشاهدين'));
 
-  // الإعدادات
-  const map = [
-    ['#setStart', 'startMin', 1],
-    ['#setMax', 'maxHours', 1],
-    ['#setSub', 'perSub', 0],
-    ['#setGift', 'perGift', 0],
-    ['#setBits', 'perBits', 0],
-    ['#setDon', 'perDonation', 0],
-    ['#setFollow', 'perFollow', 0],
-    ['#setShare', 'perShare', 0],
-    ['#setLike', 'perLike', 0],
-    ['#setDiamond', 'perDiamond', 0],
-  ];
-  map.forEach(([sel, key, min]) => {
-    const el = $(sel);
-    el?.addEventListener('change', () => {
-      const v = Math.max(min, Number(el.value) || 0);
-      el.value = v;
-      state.settings[key] = v;
-      if (key === 'startMin' && !state.timer.running && state.timer.added === 0) {
-        state.timer.reset(v * 60);
-      }
-      renderTimer();
-      persist();
-      toast('تم حفظ الإعدادات', 'ok');
-    });
+  // الإعدادات — معدلات بوحدات واضحة
+  bindRates();
+  $('#donCur')?.addEventListener('change', () => {
+    state.settings.currencyLabel = $('#donCur').value;
+    renderRateExample();
+    renderRules();
+    persist();
   });
 
   $('#swSound')?.addEventListener('click', (e) => {
@@ -1060,14 +1146,22 @@ function fillSettings() {
   const set = (sel, v) => { const el = $(sel); if (el) el.value = v; };
   set('#setStart', s.startMin);
   set('#setMax', s.maxHours);
-  set('#setSub', s.perSub);
-  set('#setGift', s.perGift);
-  set('#setBits', s.perBits);
-  set('#setDon', s.perDonation);
-  set('#setFollow', s.perFollow);
-  set('#setShare', s.perShare);
-  set('#setLike', s.perLike);
-  set('#setDiamond', s.perDiamond);
+
+  // المعدلات: نعرضها بالوحدة المحفوظة أو نختار وحدة مناسبة
+  RATES.forEach(({ key, input, unit }) => {
+    const el = $(input);
+    const ue = $(unit);
+    if (!el) return;
+    const secs = Number(s[key]) || 0;
+    const u = Number((s.units || {})[key]) || autoUnit(secs);
+    if (ue) ue.value = String(u);
+    el.value = toUnit(secs, u);
+    el.closest('.rate-row')?.classList.toggle('is-zero', secs === 0);
+  });
+
+  const dc = $('#donCur');
+  if (dc) dc.value = s.currencyLabel || 'دولار';
+  renderRateExample();
   set('#setToken', '');
   $('#swSound')?.classList.toggle('on', s.sound);
   $('#swAlert')?.classList.toggle('on', s.alert);
@@ -1116,6 +1210,7 @@ function boot() {
   bind();
   updateUrls();
   renderIncoming();
+  fillSettings();
   const rc = $('#roomCode');
   if (rc) rc.textContent = state.room;
 

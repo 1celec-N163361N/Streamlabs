@@ -7,6 +7,7 @@ const isOverlay = document.body.classList.contains('ov');
 const $ = (s) => document.querySelector(s);
 let st = null;
 let lastEvId = null;
+const LOADED_AT = Date.now();
 let toastT = null;
 
 const AV_COLORS = {
@@ -146,12 +147,18 @@ function showToast(ev) {
   if (!el || !ev) return;
   el.textContent = '';
   const name = document.createElement('span');
-  name.textContent = `${ev.name} · `;
+  name.textContent = `${ev.name}`;
+
+  const amt = document.createElement('em');
+  amt.className = 'ov-amt';
+  amt.textContent = ev.amountLabel || '';
+
   const b = document.createElement('b');
-  b.textContent = human(ev.seconds);
-  const tail = document.createElement('span');
-  tail.textContent = ' إضافية';
-  el.append(name, b, tail);
+  b.textContent = `+${human(ev.seconds)}`;
+
+  el.append(name);
+  if (ev.amountLabel) el.append(amt);
+  el.append(b);
 
   el.classList.add('on');
   clearTimeout(toastT);
@@ -173,9 +180,10 @@ function apply(next) {
 
   const ev = st.lastEvent;
   if (ev && ev.id !== lastEvId) {
-    const first = lastEvId === null;
     lastEvId = ev.id;
-    if (!first && st.settings?.alert !== false && ev.seconds > 0) showToast(ev);
+    // نُنبّه فقط للأحداث الجديدة — مو الأحداث القديمة اللي كانت موجودة قبل فتح الأوفرلاي
+    const fresh = !ev.ts || ev.ts > LOADED_AT - 8000;
+    if (fresh && st.settings?.alert !== false && ev.seconds > 0) showToast(ev);
   }
 }
 

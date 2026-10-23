@@ -44,6 +44,25 @@ export function human(seconds) {
   return rm ? `${h} ساعة و${rm} دقيقة` : `${h} ساعة`;
 }
 
+/** يعرض المبلغ مع عملته — Streamlabs أحيانًا ما يرسل formatted_amount */
+const CUR_SYMBOL = {
+  USD: '$', SAR: 'ريال', AED: 'درهم', KWD: 'دينار', QAR: 'ريال', BHD: 'دينار',
+  OMR: 'ريال', EGP: 'ج.م', JOD: 'دينار', EUR: '€', GBP: '£', TRY: '₺',
+};
+
+export function money(amount, currency, formatted) {
+  const f = formatted ? String(formatted).trim() : '';
+  if (f && /\d/.test(f)) return f;
+
+  const n = Number(amount);
+  if (!isFinite(n) || n === 0) return f || '0';
+
+  const code = String(currency || '').toUpperCase();
+  const sym = CUR_SYMBOL[code] || (code ? code : '');
+  const num = Number.isInteger(n) ? String(n) : n.toFixed(2);
+  return sym ? `${num} ${sym}` : num;
+}
+
 /** يحوّل رسالة Streamlabs إلى أحداث موحّدة */
 export function normalize(payload, st) {
   const out = [];
@@ -71,6 +90,7 @@ export function normalize(payload, st) {
     let kind = 'other';
     let seconds = 0;
     let detail = '';
+    let amountLabel = '';
 
     if (type === 'subscription' || type === 'subscribe' || type === 'member') {
       const isGift = m.sub_type === 'subgift' || Boolean(m.gifter);
@@ -88,19 +108,22 @@ export function normalize(payload, st) {
       const bits = parseFloat(m.amount) || 0;
       kind = 'bits';
       seconds = Math.round((bits / 100) * st.perBits);
-      detail = `${bits.toLocaleString('en-US')} بتس`;
+      amountLabel = `${bits.toLocaleString('en-US')} بتس`;
+      detail = amountLabel;
     } else if (type === 'donation') {
       const amt = parseFloat(m.amount) || 0;
       const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'donation';
       seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
-      detail = `${m.formatted_amount || amt} دونيشن${rule ? ' · قاعدة مخصصة' : ''}`;
+      amountLabel = money(amt, m.currency, m.formatted_amount);
+      detail = `${amountLabel} دونيشن${rule ? ' · قاعدة مخصصة' : ''}`;
     } else if (type === 'superchat') {
       const amt = (parseFloat(m.amount) || 0) / 1e6;
       const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'superchat';
       seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
-      detail = `${m.displayString || amt} سوبر شات${rule ? ' · قاعدة مخصصة' : ''}`;
+      amountLabel = money(amt, m.currency, m.displayString);
+      detail = `${amountLabel} سوبر شات${rule ? ' · قاعدة مخصصة' : ''}`;
     } else if (type === 'gift') {
       // هدايا تيك توك: الماسات × عدد التكرار
       const diamonds = Number(
@@ -118,10 +141,11 @@ export function normalize(payload, st) {
       else seconds = st.perGift;
 
       const giftName = m.gift_name || m.giftName || m.gift_type || '';
+      amountLabel = total > 0 ? `${total} ماسة` : money(amt, m.currency, m.formatted_amount);
       detail = [
         giftName || 'هدية',
         repeat > 1 ? `×${repeat}` : '',
-        total > 0 ? `${total} ماسة` : '',
+        amountLabel,
       ].filter(Boolean).join(' · ');
       if (rule) detail += ' · قاعدة مخصصة';
     } else if (type === 'follow') {
@@ -136,7 +160,8 @@ export function normalize(payload, st) {
       const n = Number(m.like_count ?? m.likeCount ?? m.count ?? 1) || 1;
       kind = 'like';
       seconds = Math.round(n * (Number(st.perLike) || 0));
-      detail = `${n.toLocaleString('en-US')} لايك`;
+      amountLabel = `${n.toLocaleString('en-US')} لايك`;
+      detail = amountLabel;
     } else if (type === 'raid') {
       kind = 'raid';
       detail = `ريد ${m.raiders || ''}`.trim();
@@ -150,8 +175,10 @@ export function normalize(payload, st) {
       kind,
       name: m.name || m.from || m.nickname || m.user || 'داعم',
       detail,
+      amountLabel,
       seconds,
       amount: parseFloat(m.amount) || 0,
+      currency: m.currency || '',
       ts: Date.now(),
     });
   });

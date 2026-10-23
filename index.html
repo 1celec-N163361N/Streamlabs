@@ -343,6 +343,7 @@
         <div class="stat"><b id="statBits">٠</b><span>بتس</span></div>
         <div class="stat"><b id="statDon">٠</b><span>دونيشن</span></div>
         <div class="stat"><b id="statMin">٠</b><span>دقيقة</span></div>
+        <div class="stat"><b id="statMoney">٠</b><span>المبالغ</span></div>
       </div>
     </aside>
   </div>
@@ -356,99 +357,132 @@
   </div>
   <div class="drawer-body">
 
+    <!-- ١ · العدّاد -->
     <div class="dsec">
-      <div class="dsec-t">الوقت</div>
+      <div class="dsec-t">١ · العدّاد</div>
       <div class="field-row">
         <div class="field">
-          <label>وقت البداية (دقيقة)</label>
-          <input class="input" id="setStart" type="number" min="1" max="1440" />
+          <label>يبدأ بـ</label>
+          <div class="with-suffix">
+            <input class="input" id="setStart" type="number" min="1" max="1440" />
+            <span>دقيقة</span>
+          </div>
         </div>
         <div class="field">
-          <label>الحد الأعلى (ساعة)</label>
-          <input class="input" id="setMax" type="number" min="1" max="72" />
+          <label>الحد الأعلى</label>
+          <div class="with-suffix">
+            <input class="input" id="setMax" type="number" min="1" max="72" />
+            <span>ساعة</span>
+          </div>
         </div>
       </div>
-      <div class="field">
-        <label>كل سبسكريب (ثانية)</label>
-        <input class="input" id="setSub" type="number" min="0" />
-        <div class="hint">٣٠٠ ثانية = ٥ دقائق</div>
-      </div>
-      <div class="field">
-        <label>كل جفت سب (ثانية)</label>
-        <input class="input" id="setGift" type="number" min="0" />
-      </div>
-      <div class="field" style="margin-bottom:0">
-        <label>كل ١٠٠ بتس (ثانية)</label>
-        <input class="input" id="setBits" type="number" min="0" />
-      </div>
     </div>
 
+    <!-- ٢ · كم يزيد الوقت؟ -->
     <div class="dsec">
-      <div class="dsec-t">تيك توك والمتابعين</div>
-      <div class="field">
-        <label>كل متابعة (ثانية)</label>
-        <input class="input" id="setFollow" type="number" min="0" />
+      <div class="dsec-t">٢ · كم يزيد الوقت؟</div>
+      <p class="dsec-d">حدّد مرة واحدة كم يعطي كل نوع دعم. الباقي يشتغل لحاله.</p>
+
+      <div class="rate-hero">
+        <div class="rh-line">
+          <span class="rh-txt">كل <b>١</b></span>
+          <select class="input rh-cur" id="donCur">
+            <option value="دولار">دولار</option>
+            <option value="ريال">ريال</option>
+            <option value="درهم">درهم</option>
+            <option value="دينار">دينار</option>
+          </select>
+          <span class="rh-txt">=</span>
+          <input class="input rh-num" id="setDon" type="number" min="0" step="0.5" />
+          <select class="input rh-unit" id="unitDon">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+            <option value="3600">ساعة</option>
+          </select>
+        </div>
+        <div class="rh-ex" id="rateExample">تبرع ٥ ← +٥٠ دقيقة</div>
       </div>
-      <div class="field">
-        <label>كل مشاركة للبث (ثانية)</label>
-        <input class="input" id="setShare" type="number" min="0" />
+
+      <div class="rate-list">
+        <div class="rate-row">
+          <span class="rate-l">متابعة جديدة</span>
+          <input class="input rate-n" id="setFollow" type="number" min="0" step="0.5" />
+          <select class="input rate-u" id="unitFollow">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+          </select>
+        </div>
+        <div class="rate-row">
+          <span class="rate-l">مشاركة للبث</span>
+          <input class="input rate-n" id="setShare" type="number" min="0" step="0.5" />
+          <select class="input rate-u" id="unitShare">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+          </select>
+        </div>
+        <div class="rate-row">
+          <span class="rate-l">كل ماسة (هدية تيك توك)</span>
+          <input class="input rate-n" id="setDiamond" type="number" min="0" step="0.5" />
+          <select class="input rate-u" id="unitDiamond">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+          </select>
+        </div>
+        <div class="rate-row">
+          <span class="rate-l">كل لايك</span>
+          <input class="input rate-n" id="setLike" type="number" min="0" step="0.5" />
+          <select class="input rate-u" id="unitLike">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+          </select>
+        </div>
+        <div class="rate-row">
+          <span class="rate-l">سبسكريب</span>
+          <input class="input rate-n" id="setSub" type="number" min="0" step="0.5" />
+          <select class="input rate-u" id="unitSub">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+          </select>
+        </div>
+        <div class="rate-row">
+          <span class="rate-l">جفت سب</span>
+          <input class="input rate-n" id="setGift" type="number" min="0" step="0.5" />
+          <select class="input rate-u" id="unitGift">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+          </select>
+        </div>
+        <div class="rate-row">
+          <span class="rate-l">كل ١٠٠ بتس</span>
+          <input class="input rate-n" id="setBits" type="number" min="0" step="0.5" />
+          <select class="input rate-u" id="unitBits">
+            <option value="60">دقيقة</option>
+            <option value="1">ثانية</option>
+          </select>
+        </div>
       </div>
-      <div class="field">
-        <label>كل ماسة في هدايا تيك توك (ثانية)</label>
-        <input class="input" id="setDiamond" type="number" min="0" />
-        <div class="hint">وردة = ١ ماسة. لو حطيت ٦٠، الوردة تعطي دقيقة والهدية الكبيرة تعطي أكثر.</div>
-      </div>
-      <div class="field" style="margin-bottom:0">
-        <label>كل لايك (ثانية)</label>
-        <input class="input" id="setLike" type="number" min="0" />
-        <div class="hint">خله ٠ إذا ما تبي اللايكات تزوّد الوقت — تجي بالمئات وتخرب العدّاد.</div>
-      </div>
+      <div class="hint">خله ٠ لأي نوع ما تبي يزيد الوقت — مثل اللايكات، تجي بالمئات وتخرب العدّاد.</div>
     </div>
 
+    <!-- ٣ · قواعد مخصصة -->
     <div class="dsec">
-      <div class="dsec-t">الوارد المباشر — تشخيص</div>
-      <div class="raw-stat">
-        <div><span>حزم واصلة</span><b id="rawCount">0</b></div>
-        <div><span>أحداث محسوبة</span><b id="evCount">0</b></div>
-        <button class="btn ghost xs" id="btnClearRaw">تفريغ</button>
-      </div>
-      <div class="raw-log" id="rawLog"></div>
-      <div class="hint">
-        أي حدث يوصلك من Streamlabs يظهر هنا كما هو. إذا وصلت هدية/متابعة وما ظهر شي —
-        معناها المنصة ما ترسل أحداثها عبر Socket API، استخدم الأزرار اليدوية تحت.
-      </div>
-      <div class="manual-row">
-        <button class="btn ghost xs" data-add="1">+١ د</button>
-        <button class="btn ghost xs" data-add="5">+٥ د</button>
-        <button class="btn ghost xs" data-add="10">+١٠ د</button>
-        <button class="btn ghost xs" data-add="30">+٣٠ د</button>
-      </div>
-      <div class="manual-row">
-        <button class="btn ghost xs" data-test="follow">متابعة تجريبية</button>
-        <button class="btn ghost xs" data-test="gift">هدية تجريبية</button>
-        <button class="btn ghost xs" data-test="donation">دونيشن تجريبي</button>
-      </div>
-    </div>
-
-    <div class="dsec">
-      <div class="dsec-t">الدونيشن</div>
-      <div class="field">
-        <label>المعدل العام — كل ١ عملة = كم ثانية؟</label>
-        <input class="input" id="setDon" type="number" min="0" />
-        <div class="hint">يُطبَّق على أي مبلغ ما له قاعدة مخصصة. مثال: ٦٠ × ٢٥ ريال = ٢٥ دقيقة.</div>
-      </div>
-      <label class="form-label" style="margin-top:16px">قواعد مخصصة لكل مبلغ</label>
+      <div class="dsec-t">٣ · قواعد مخصصة لكل مبلغ</div>
+      <p class="dsec-d">تتجاوز المعدل العام. مفيدة للمبالغ الكبيرة — ٥٠ ريال تعطي وقت أكبر من ١٠ × ٥ ريال.</p>
       <div class="rules" id="rulesList"></div>
       <div class="rule-add">
         <input class="input" id="ruleAmount" type="number" min="0" step="0.5" placeholder="المبلغ" />
-        <input class="input" id="ruleSeconds" type="number" min="0" placeholder="ثانية" />
+        <input class="input" id="ruleSeconds" type="number" min="0" step="0.5" placeholder="الوقت" />
+        <select class="input" id="ruleUnit">
+          <option value="60">دقيقة</option>
+          <option value="1">ثانية</option>
+        </select>
         <button class="btn ghost xs" id="btnAddRule">إضافة</button>
       </div>
-      <div class="hint">مثال: ٥ ريال = ١٢٠ ثانية، ٥٠ ريال = ٩٠٠ ثانية.</div>
     </div>
 
+    <!-- ٤ · الشكل -->
     <div class="dsec">
-      <div class="dsec-t">شكل الأوفرلاي</div>
+      <div class="dsec-t">٤ · شكل الأوفرلاي</div>
       <div class="ov-preview" id="ovPreview">
         <div class="ov-pv-card" id="ovPvCard">
           <div class="ov-pv-digits" id="ovPvDigits">01:24:07</div>
@@ -459,7 +493,7 @@
         </div>
       </div>
       <div class="field" style="margin-top:14px">
-        <label>اللون الأساسي</label>
+        <label>اللون</label>
         <div class="swatches" id="swatches">
           <button data-color="#8b5cf6" style="background:#8b5cf6" aria-label="بنفسجي"></button>
           <button data-color="#22d3ee" style="background:#22d3ee" aria-label="سماوي"></button>
@@ -470,7 +504,7 @@
         </div>
       </div>
       <div class="field">
-        <label>الموضع</label>
+        <label>الموضع على الشاشة</label>
         <select class="input" id="ovPos">
           <option value="bottom-center">أسفل الوسط</option>
           <option value="bottom-right">أسفل اليمين</option>
@@ -493,29 +527,26 @@
         <input class="range" id="ovRadius" type="range" min="0" max="34" step="1" value="20" />
       </div>
       <div class="switch-row">
-        <span>إظهار شارة LIVE</span>
+        <span>شارة LIVE</span>
         <button class="switch on" id="swOvLive"></button>
       </div>
       <div class="switch-row">
-        <span>إظهار النص تحت الوقت</span>
+        <span>النص تحت الوقت</span>
         <button class="switch on" id="swOvLabel"></button>
       </div>
-    </div>
-
-    <div class="dsec">
-      <div class="dsec-t">التنبيهات</div>
       <div class="switch-row">
         <span>صوت عند كل دعم</span>
         <button class="switch" id="swSound" aria-label="صوت"></button>
       </div>
       <div class="switch-row">
-        <span>تنبيه على الشاشة (أوفرلاي)</span>
+        <span>تنبيه على الشاشة</span>
         <button class="switch on" id="swAlert" aria-label="تنبيه"></button>
       </div>
     </div>
 
+    <!-- ٥ · الأمان والروابط -->
     <div class="dsec">
-      <div class="dsec-t">الأمان</div>
+      <div class="dsec-t">٥ · الأمان والروابط</div>
       <div class="field">
         <label>رمز الدخول الحالي</label>
         <div class="token-field" style="margin-bottom:8px">
@@ -526,26 +557,20 @@
       </div>
       <div class="field-row">
         <div class="field">
-          <label>رمز جديد (٤-٦ أرقام)</label>
-          <input class="input" id="newPin" type="password" inputmode="numeric" maxlength="6" dir="ltr" placeholder="••••" />
+          <label>رمز جديد</label>
+          <input class="input" id="newPin" type="password" inputmode="numeric" maxlength="6" dir="ltr" placeholder="٤-٦ أرقام" />
         </div>
         <div class="field" style="display:flex;align-items:flex-end">
           <button class="btn ghost" id="btnChangePin" style="width:100%">تغيير</button>
         </div>
       </div>
-      <button class="btn ghost" id="btnNewRoom" style="width:100%">نقل لغرفة جديدة</button>
-      <div class="hint" style="margin-top:8px">لو نسيت الرمز: الغرفة الجديدة تعطيك رمزًا جديدًا ورابط أوفرلاي جديد.</div>
-    </div>
-
-    <div class="dsec">
-      <div class="dsec-t">الروابط والتوكن</div>
       <div class="field">
         <label>رابط الأوفرلاي لـ OBS</label>
         <div class="token-field" style="margin-bottom:8px">
           <input id="overlayUrl" readonly dir="ltr" style="font-size:11.5px" />
           <button class="btn ghost xs" id="btnCopyOverlay">نسخ</button>
         </div>
-        <div class="hint">أضفه في OBS كمصدر «Browser» بمقاس ٨٠٠×٢٠٠ وخلفية شفافة.</div>
+        <div class="hint">مصدر «Browser» بمقاس ٨٠٠×٢٠٠ وخلفية شفافة.</div>
       </div>
       <div class="field">
         <label>رابط المشاهدين</label>
@@ -553,16 +578,44 @@
           <input id="watchUrl" readonly dir="ltr" style="font-size:11.5px" />
           <button class="btn ghost xs" id="btnCopyWatch">نسخ</button>
         </div>
-        <div class="hint">شاركه مع جمهورك — يفتحون الرابط ويشوفون العدّاد مباشرة.</div>
       </div>
+      <button class="btn ghost" id="btnNewRoom" style="width:100%">نقل لغرفة جديدة</button>
+    </div>
+
+    <!-- ٦ · التشخيص -->
+    <div class="dsec">
+      <div class="dsec-t">٦ · تشخيص الوارد</div>
+      <div class="raw-stat">
+        <div><span>حزم واصلة</span><b id="rawCount">0</b></div>
+        <div><span>أحداث محسوبة</span><b id="evCount">0</b></div>
+        <button class="btn ghost xs" id="btnClearRaw">تفريغ</button>
+      </div>
+      <div class="raw-log" id="rawLog"></div>
+      <div class="hint">
+        أي حدث يوصلك من Streamlabs يظهر هنا كما هو. إذا وصلت هدية وما ظهر شي —
+        المنصة ما ترسل أحداثها عبر Socket API، استخدم الأزرار تحت.
+      </div>
+      <div class="manual-row">
+        <button class="btn ghost xs" data-add="1">+١ د</button>
+        <button class="btn ghost xs" data-add="5">+٥ د</button>
+        <button class="btn ghost xs" data-add="10">+١٠ د</button>
+        <button class="btn ghost xs" data-add="30">+٣٠ د</button>
+      </div>
+      <div class="manual-row">
+        <button class="btn ghost xs" data-test="follow">متابعة تجريبية</button>
+        <button class="btn ghost xs" data-test="gift">هدية تجريبية</button>
+        <button class="btn ghost xs" data-test="donation">دونيشن تجريبي</button>
+      </div>
+    </div>
+
+    <!-- ٧ · التوكن -->
+    <div class="dsec">
+      <div class="dsec-t">٧ · التوكن</div>
       <div class="field">
-        <label>تغيير التوكن</label>
+        <label>Socket API Token</label>
         <input class="input" id="setToken" type="password" dir="ltr" placeholder="Socket API Token" />
       </div>
-      <div class="drawer-note">
-        <b>ملاحظة:</b> الإعدادات تُحفظ محليًا في متصفحك. لو غيّرت التوكن، أعد الاتصال من الزر بالأسفل.
-      </div>
-      <button class="btn primary" id="btnReconnect" style="width:100%;margin-top:14px">إعادة الاتصال</button>
+      <button class="btn primary" id="btnReconnect" style="width:100%;margin-top:6px">إعادة الاتصال</button>
       <button class="btn ghost" id="btnDemoToggle" style="width:100%;margin-top:8px">تشغيل الوضع التجريبي</button>
     </div>
   </div>
