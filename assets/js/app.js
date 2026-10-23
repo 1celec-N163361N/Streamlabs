@@ -319,6 +319,8 @@ async function connect(token, { demo = false } = {}) {
     await sock.connect(token);
     state.token = token;
     stopDemo();
+    clearTimeout(reconnectTimer);
+    reconnectAttempts = 0;
     setConn('live', 'متصل بـ Streamlabs');
     enterStudio();
     persist();
@@ -333,10 +335,37 @@ async function connect(token, { demo = false } = {}) {
 }
 
 sock.on('event', handlePayload);
-sock.on('close', () => {
-  if (!state.demo && state.conn === 'live') {
+
+let reconnectAttempts = 0;
+let reconnectTimer = null;
+
+function scheduleReconnect() {
+  if (state.demo || !state.token) return;
+  if (reconnectAttempts >= 8) {
     setConn('err', 'انقطع الاتصال');
-    toast('انقطع الاتصال بـ Streamlabs — جرّب إعادة الربط', 'err');
+    toast('تعذّر إعادة الاتصال — افتح الإعدادات واضغط «إعادة الاتصال»', 'err');
+    return;
+  }
+  clearTimeout(reconnectTimer);
+  const delay = Math.min(15000, 1500 * Math.pow(1.7, reconnectAttempts));
+  reconnectAttempts += 1;
+  setConn('idle', `إعادة الاتصال… (${reconnectAttempts})`);
+  reconnectTimer = setTimeout(async () => {
+    try {
+      await sock.connect(state.token);
+      reconnectAttempts = 0;
+      setConn('live', 'متصل بـ Streamlabs');
+      toast('رجع الاتصال بـ Streamlabs', 'ok');
+    } catch (_) {
+      scheduleReconnect();
+    }
+  }, delay);
+}
+
+sock.on('close', () => {
+  if (state.demo) return;
+  if (state.conn === 'live' || state.conn === 'idle') {
+    scheduleReconnect();
   }
 });
 

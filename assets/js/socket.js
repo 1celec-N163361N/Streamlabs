@@ -1,12 +1,15 @@
-// عميل Engine.IO v3 (Socket.IO 2.x) — بدون أي مكتبة خارجية
-// يستخدمه Streamlabs على wss://sockets.streamlabs.com
+// عميل Engine.IO v4 (Socket.IO v4) — بدون أي مكتبة خارجية
+// Streamlabs يستخدم sockets.streamlabs.com على بروتوكول EIO=4
+// ملاحظة: في v4 السيرفر هو اللي يرسل ping (2) والعميل يرد pong (3)
+
+const EIO = 4;
 
 export class StreamlabsSocket {
   constructor() {
     this.ws = null;
     this.ready = false;
-    this.pingTimer = null;
     this.handlers = new Map();
+    this.lastPong = 0;
   }
 
   on(name, fn) {
@@ -26,7 +29,7 @@ export class StreamlabsSocket {
       this.close();
 
       const url =
-        'wss://sockets.streamlabs.com/socket.io/?EIO=3&transport=websocket&token=' +
+        `wss://sockets.streamlabs.com/socket.io/?EIO=${EIO}&transport=websocket&token=` +
         encodeURIComponent(token);
 
       let ws;
@@ -40,16 +43,10 @@ export class StreamlabsSocket {
       let settled = false;
       let wasReady = false;
 
-      const cleanup = () => {
-        clearTimeout(timer);
-        clearInterval(this.pingTimer);
-        this.pingTimer = null;
-      };
-
       const fail = (msg) => {
         if (settled) return;
         settled = true;
-        cleanup();
+        clearTimeout(timer);
         this.ready = false;
         try { ws.close(); } catch (_) {}
         reject(new Error(msg));
@@ -70,27 +67,29 @@ export class StreamlabsSocket {
         timeout
       );
 
-      ws.onopen = () => {};
-
       ws.onmessage = (ev) => {
         const data = typeof ev.data === 'string' ? ev.data : '';
         if (!data) return;
 
         const code = data[0];
 
+        // حزمة الفتح — نفتح النطاق الافتراضي
         if (code === '0') {
-          // حزمة الفتح — نبدأ النطاق ونشغّل نبض الاتصال
-          let interval = 25000;
-          try { interval = JSON.parse(data.slice(1)).pingInterval || 25000; } catch (_) {}
           try { ws.send('40'); } catch (_) {}
-          this.pingTimer = setInterval(() => {
-            try { ws.send('2'); } catch (_) {}
-          }, interval);
           return;
         }
 
-        if (code === '2') { try { ws.send('3'); } catch (_) {} return; }
+        // نبض السيرفر — نرد pong فورًا وإلا يقطع الاتصال
+        if (code === '2') {
+          try { ws.send('3'); } catch (_) {}
+          this.lastPong = Date.now();
+          return;
+        }
+
+        // تم فتح النطاق
         if (data.startsWith('40')) { ok(); return; }
+
+        // حدث
         if (data.startsWith('42')) {
           try {
             const arr = JSON.parse(data.slice(2));
@@ -98,7 +97,19 @@ export class StreamlabsSocket {
           } catch (_) {}
           return;
         }
-        if (data.startsWith('44')) { fail('التوكن غير صالح — أعد نسخه من Streamlabs'); return; }
+
+        // رفض النطاق
+        if (data.startsWith('44')) {
+          let msg = 'التوكن غير صالح — أعد نسخه من Streamlabs';
+          try {
+            const info = JSON.parse(data.slice(2));
+            if (info && info.message) msg = 'رفض Streamlabs الاتصال: ' + info.message;
+          } catch (_) {}
+          fail(msg);
+          return;
+        }
+
+        // إغلاق من السيرفر
         if (code === '1') {
           if (!this.ready) fail('رفض السيرفر الاتصال');
           else { this.ready = false; this.emit('close'); }
@@ -110,7 +121,7 @@ export class StreamlabsSocket {
       };
 
       ws.onclose = () => {
-        cleanup();
+        clearTimeout(timer);
         if (!settled) return fail('انقطع الاتصال قبل التأكيد');
         if (wasReady) {
           this.ready = false;
@@ -121,12 +132,11 @@ export class StreamlabsSocket {
   }
 
   close() {
-    clearInterval(this.pingTimer);
-    this.pingTimer = null;
     if (this.ws) {
       try {
         this.ws.onclose = null;
         this.ws.onerror = null;
+        this.ws.onmessage = null;
         this.ws.close();
       } catch (_) {}
       this.ws = null;
