@@ -763,6 +763,52 @@ function runCalc() {
   `;
 }
 
+/** يقرأ رسالة Streamlabs ملصوقة ويعرض كيف فهمها التطبيق */
+function parsePasted() {
+  const out = $('#pasteOut');
+  if (!out) return;
+  const raw = ($('#pasteBox')?.value || '').trim();
+
+  if (!raw) {
+    out.innerHTML = '<div class="co-empty">الصق الرسالة كاملة (JSON) من Streamlabs.</div>';
+    return;
+  }
+
+  let j;
+  try {
+    j = JSON.parse(raw);
+  } catch (_) {
+    out.innerHTML = '<div class="co-warn">مو JSON صحيح — انسخ الرسالة كاملة من المرقاب فوق.</div>';
+    return;
+  }
+
+  // رسالة alertPlaying تحمل الحدث داخل message
+  let p = j;
+  if (j && j.type === 'alertPlaying' && j.message && typeof j.message === 'object') {
+    p = { type: j.message.type || 'donation', for: 'streamlabs', message: [j.message] };
+  }
+
+  if (!p || !p.type) {
+    out.innerHTML = '<div class="co-warn">الرسالة ما فيها نوع الحدث (type).</div>';
+    return;
+  }
+
+  const evs = normalize(p, state.settings);
+  if (!evs.length) {
+    out.innerHTML = '<div class="co-warn">ما قدرنا نستخرج حدثًا من هذه الرسالة.</div>';
+    return;
+  }
+
+  const ev = evs[0];
+  out.innerHTML = `
+    <div class="co-line"><span>النوع</span><b>${esc(ev.platform)} · ${esc(p.type)}</b></div>
+    <div class="co-line"><span>الداعم</span><b>${esc(ev.name)}</b></div>
+    <div class="co-line"><span>المبلغ المقروء</span><b>${esc(ev.amountLabel || '—')}</b></div>
+    <div class="co-line"><span>الوقت المستحق</span><b>+${human(ev.seconds)}</b></div>
+    ${evs.length > 1 ? `<div class="co-line"><span>رسائل داخل الحزمة</span><b>${evs.length}</b></div>` : ''}
+  `;
+}
+
 function bindRates() {
   // وقت البداية والحد الأعلى
   $('#setStart')?.addEventListener('change', (e) => {
@@ -1220,6 +1266,7 @@ function bind() {
 
   $('#btnCalc')?.addEventListener('click', runCalc);
   $('#calcAmt')?.addEventListener('input', runCalc);
+  $('#btnParsePaste')?.addEventListener('click', parsePasted);
 
   $('#btnClearRaw')?.addEventListener('click', () => {
     state.raw = [];

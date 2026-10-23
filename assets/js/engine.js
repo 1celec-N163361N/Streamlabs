@@ -100,16 +100,42 @@ export function parseAmount(raw) {
   return isFinite(n) ? n : 0;
 }
 
+/**
+ * يستخرج المبلغ الصحيح من رسالة Streamlabs.
+ *
+ * سبب وجودها: Streamlabs يرسل في بعض التنبيهات (خصوصًا الاختبارية)
+ * `amount: 2` بينما `formattedAmount: "$12.00"` — أي أن amount رقم داخلي
+ * لا علاقة له بالمبلغ الحقيقي. الرقم الموثوق هو المنسّق.
+ */
+export function donationAmount(m) {
+  if (!m) return 0;
+  const p = m.payload || {};
+
+  const formatted =
+    m.formatted_amount ??
+    m.formattedAmount ??
+    p.formattedAmount ??
+    p.formatted_amount ??
+    null;
+
+  const raw = m.amount ?? p.amount ?? null;
+
+  const fv = parseAmount(formatted);
+  const rv = parseAmount(raw);
+
+  // المنسّق أولًا — هو اللي يطابق المبلغ المعلن للمشاهد
+  if (fv > 0) return fv;
+  return rv > 0 ? rv : 0;
+}
+
 /** يعرض المبلغ مع عملته — ويضمن أن المعروض = المحسوب */
 export function money(amount, currency, formatted) {
   const n = parseAmount(amount);
   const f = formatted ? String(formatted).trim() : '';
-  const fn = f ? parseAmount(f) : NaN;
 
-  // نستخدم الصيغة الجاهزة فقط إذا كانت تطابق الرقم الحقيقي
-  if (f && /\d/.test(f) && isFinite(fn) && Math.abs(fn - n) < 0.011) return f;
+  // نستخدم النص الجاهز فقط إذا كان يمثل نفس الرقم الذي سنحسب به
+  if (n !== 0 && f && /\d/.test(f) && Math.abs(parseAmount(f) - n) < 0.011) return f;
 
-  // غير كذا نبني العرض من الرقم نفسه — عشان ما يقول ٦٠ وهو ١٠٠
   if (n !== 0) {
     const code = String(currency || '').toUpperCase();
     const sym = CUR_SYMBOL[code] || code;
@@ -118,6 +144,24 @@ export function money(amount, currency, formatted) {
   }
 
   return f || '0';
+}
+
+/**
+ * اسم الداعم الصحيح.
+ * بعض رسائل Streamlabs تحط اسم القناة في `name` واسم الداعم في `from`.
+ */
+export function donorName(m) {
+  if (!m) return 'داعم';
+
+  const toName = m.to && typeof m.to === 'object' ? m.to.name : m.to;
+  const fromName =
+    typeof m.from === 'string' ? m.from : (m.from && m.from.name) || '';
+  const name = m.name || '';
+
+  // لو `name` هو نفسه اسم القناة، فالداعم هو `from`
+  if (fromName && (!name || name === toName)) return fromName;
+
+  return name || fromName || m.nickname || m.user || 'داعم';
 }
 
 /** يحوّل رسالة Streamlabs إلى أحداث موحّدة */
@@ -148,6 +192,7 @@ export function normalize(payload, st) {
     let seconds = 0;
     let detail = '';
     let amountLabel = '';
+    let amountValue = 0;
 
     if (type === 'subscription' || type === 'subscribe' || type === 'member') {
       const isGift = m.sub_type === 'subgift' || Boolean(m.gifter);
@@ -166,20 +211,24 @@ export function normalize(payload, st) {
       kind = 'bits';
       seconds = Math.round((bits / 100) * st.perBits);
       amountLabel = `${bits.toLocaleString('en-US')} بتس`;
+      amountValue = bits;
       detail = amountLabel;
     } else if (type === 'donation') {
-      const amt = parseAmount(m.amount) || 0;
+      const amt = donationAmount(m);
       const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'donation';
       seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
-      amountLabel = money(amt, m.currency, m.formatted_amount);
+      amountLabel = money(amt, m.currency || m.payload?.currency, m.formatted_amount || m.formattedAmount || m.payload?.formattedAmount);
+      amountValue = amt;
       detail = `${amountLabel} دونيشن${rule ? ' · قاعدة مخصصة' : ''}`;
+      if (m.isTest) detail += ' · اختبار';
     } else if (type === 'superchat') {
-      const amt = (parseAmount(m.amount) || 0) / 1e6;
+      const amt = (donationAmount(m) || 0) / 1e6;
       const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'superchat';
       seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
       amountLabel = money(amt, m.currency, m.displayString);
+      amountValue = amt;
       detail = `${amountLabel} سوبر شات${rule ? ' · قاعدة مخصصة' : ''}`;
     } else if (type === 'gift') {
       // هدايا تيك توك: الماسات × عدد التكرار
@@ -204,6 +253,7 @@ export function normalize(payload, st) {
         repeat > 1 ? `×${repeat}` : '',
         amountLabel,
       ].filter(Boolean).join(' · ');
+      amountValue = total > 0 ? total : amt;
       if (rule) detail += ' · قاعدة مخصصة';
     } else if (type === 'follow') {
       kind = 'follow';
@@ -218,6 +268,7 @@ export function normalize(payload, st) {
       kind = 'like';
       seconds = Math.round(n * (Number(st.perLike) || 0));
       amountLabel = `${n.toLocaleString('en-US')} لايك`;
+      amountValue = n;
       detail = amountLabel;
     } else if (type === 'raid') {
       kind = 'raid';
@@ -230,11 +281,11 @@ export function normalize(payload, st) {
       id: String(id),
       platform,
       kind,
-      name: m.name || m.from || m.nickname || m.user || 'داعم',
+      name: donorName(m),
       detail,
       amountLabel,
       seconds,
-      amount: parseAmount(m.amount) || 0,
+      amount: amountValue,
       currency: m.currency || '',
       ts: Date.now(),
     });
