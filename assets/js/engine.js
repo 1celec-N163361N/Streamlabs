@@ -7,6 +7,10 @@ export const DEFAULTS = {
   perGift: 300,     // ثواني لكل جفت سب
   perBits: 100,     // ثواني لكل 100 بتس
   perDonation: 60,  // ثواني لكل وحدة عملة
+  perFollow: 60,    // ثواني لكل متابعة (تيك توك وغيرها)
+  perShare: 30,     // ثواني لكل مشاركة
+  perLike: 0,       // ثواني لكل لايك
+  perDiamond: 1,    // ثواني لكل ماسة (هدايا تيك توك)
   sound: true,
   alert: true,
   donationRules: [], // [{ amount: 5, seconds: 120 }]
@@ -51,20 +55,24 @@ export function normalize(payload, st) {
       : [];
 
   const platform = String(payload.for || 'streamlabs').replace('_account', '');
-  const type = payload.type;
+  // تيك توك يرسل أحيانًا النوع مسبوقًا بـ tiktok_ — نوحّده
+  const rawType = String(payload.type || '').toLowerCase();
+  const type = rawType.startsWith('tiktok_') ? rawType.slice(7) : rawType;
+  const isTikTok = platform === 'tiktok' || rawType.startsWith('tiktok_');
 
   list.forEach((m, i) => {
     if (!m) return;
     const id =
       m._id ||
       m.id ||
+      m.event_id ||
       `${payload.event_id || ''}-${type}-${m.name || ''}-${m.amount || ''}-${i}`;
 
     let kind = 'other';
     let seconds = 0;
     let detail = '';
 
-    if (type === 'subscription') {
+    if (type === 'subscription' || type === 'subscribe' || type === 'member') {
       const isGift = m.sub_type === 'subgift' || Boolean(m.gifter);
       const isResub = m.sub_type === 'resub' || Number(m.months) > 1;
       kind = isGift ? 'gift' : isResub ? 'resub' : 'sub';
@@ -93,21 +101,54 @@ export function normalize(payload, st) {
       kind = 'superchat';
       seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
       detail = `${m.displayString || amt} سوبر شات${rule ? ' · قاعدة مخصصة' : ''}`;
+    } else if (type === 'gift') {
+      // هدايا تيك توك: الماسات × عدد التكرار
+      const diamonds = Number(
+        m.diamond_count ?? m.diamonds ?? m.diamondCount ?? m.diamond ?? 0
+      ) || 0;
+      const repeat = Number(m.repeat_count ?? m.repeatCount ?? 1) || 1;
+      const total = diamonds * repeat;
+      const amt = parseFloat(m.amount) || 0;
+      const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
+
+      kind = 'gift';
+      if (rule) seconds = Number(rule.seconds);
+      else if (total > 0) seconds = Math.round(total * (st.perDiamond || 0));
+      else if (amt > 0) seconds = Math.round(amt * st.perDonation);
+      else seconds = st.perGift;
+
+      const giftName = m.gift_name || m.giftName || m.gift_type || '';
+      detail = [
+        giftName || 'هدية',
+        repeat > 1 ? `×${repeat}` : '',
+        total > 0 ? `${total} ماسة` : '',
+      ].filter(Boolean).join(' · ');
+      if (rule) detail += ' · قاعدة مخصصة';
     } else if (type === 'follow') {
       kind = 'follow';
+      seconds = Number(st.perFollow) || 0;
       detail = 'متابعة جديدة';
+    } else if (type === 'share') {
+      kind = 'share';
+      seconds = Number(st.perShare) || 0;
+      detail = 'مشاركة للبث';
+    } else if (type === 'like') {
+      const n = Number(m.like_count ?? m.likeCount ?? m.count ?? 1) || 1;
+      kind = 'like';
+      seconds = Math.round(n * (Number(st.perLike) || 0));
+      detail = `${n.toLocaleString('en-US')} لايك`;
     } else if (type === 'raid') {
       kind = 'raid';
       detail = `ريد ${m.raiders || ''}`.trim();
     } else {
-      detail = type;
+      detail = isTikTok ? `${type} (تيك توك)` : type;
     }
 
     out.push({
       id: String(id),
       platform,
       kind,
-      name: m.name || m.from || 'داعم',
+      name: m.name || m.from || m.nickname || m.user || 'داعم',
       detail,
       seconds,
       amount: parseFloat(m.amount) || 0,

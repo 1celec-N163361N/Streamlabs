@@ -72,6 +72,8 @@ export class StreamlabsSocket {
         if (!data) return;
 
         const code = data[0];
+        this.frames = (this.frames || 0) + 1;
+        this.emit('raw', data);
 
         // حزمة الفتح — نفتح النطاق الافتراضي
         if (code === '0') {

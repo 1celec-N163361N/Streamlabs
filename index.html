@@ -384,6 +384,53 @@
     </div>
 
     <div class="dsec">
+      <div class="dsec-t">تيك توك والمتابعين</div>
+      <div class="field">
+        <label>كل متابعة (ثانية)</label>
+        <input class="input" id="setFollow" type="number" min="0" />
+      </div>
+      <div class="field">
+        <label>كل مشاركة للبث (ثانية)</label>
+        <input class="input" id="setShare" type="number" min="0" />
+      </div>
+      <div class="field">
+        <label>كل ماسة في هدايا تيك توك (ثانية)</label>
+        <input class="input" id="setDiamond" type="number" min="0" />
+        <div class="hint">وردة = ١ ماسة. لو حطيت ٦٠، الوردة تعطي دقيقة والهدية الكبيرة تعطي أكثر.</div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>كل لايك (ثانية)</label>
+        <input class="input" id="setLike" type="number" min="0" />
+        <div class="hint">خله ٠ إذا ما تبي اللايكات تزوّد الوقت — تجي بالمئات وتخرب العدّاد.</div>
+      </div>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-t">الوارد المباشر — تشخيص</div>
+      <div class="raw-stat">
+        <div><span>حزم واصلة</span><b id="rawCount">0</b></div>
+        <div><span>أحداث محسوبة</span><b id="evCount">0</b></div>
+        <button class="btn ghost xs" id="btnClearRaw">تفريغ</button>
+      </div>
+      <div class="raw-log" id="rawLog"></div>
+      <div class="hint">
+        أي حدث يوصلك من Streamlabs يظهر هنا كما هو. إذا وصلت هدية/متابعة وما ظهر شي —
+        معناها المنصة ما ترسل أحداثها عبر Socket API، استخدم الأزرار اليدوية تحت.
+      </div>
+      <div class="manual-row">
+        <button class="btn ghost xs" data-add="1">+١ د</button>
+        <button class="btn ghost xs" data-add="5">+٥ د</button>
+        <button class="btn ghost xs" data-add="10">+١٠ د</button>
+        <button class="btn ghost xs" data-add="30">+٣٠ د</button>
+      </div>
+      <div class="manual-row">
+        <button class="btn ghost xs" data-test="follow">متابعة تجريبية</button>
+        <button class="btn ghost xs" data-test="gift">هدية تجريبية</button>
+        <button class="btn ghost xs" data-test="donation">دونيشن تجريبي</button>
+      </div>
+    </div>
+
+    <div class="dsec">
       <div class="dsec-t">الدونيشن</div>
       <div class="field">
         <label>المعدل العام — كل ١ عملة = كم ثانية؟</label>

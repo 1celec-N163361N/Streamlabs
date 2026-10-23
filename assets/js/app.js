@@ -38,6 +38,9 @@ const state = {
   demo: false,
   lastSeen: Number(saved.lastSeen) || 0,
   resumeGap: 0,
+  raw: [],       // آخر الحزم الخام من Streamlabs (للجلسة الحالية فقط)
+  rawCount: 0,   // كم حزمة وصلت
+  evCount: 0,    // كم حدث تحوّل لوقت
 };
 
 if (!state.timer.base) state.timer.reset(state.settings.startMin * 60);
@@ -296,7 +299,94 @@ function applyEvent(ev) {
 }
 
 function handlePayload(payload) {
-  normalize(payload, state.settings).forEach(applyEvent);
+  const events = normalize(payload, state.settings);
+  events.forEach(applyEvent);
+
+  state.evCount += events.length;
+  logRaw(
+    `${payload.for || 'streamlabs'} · ${payload.type}`,
+    JSON.stringify(payload).slice(0, 900),
+    events.length ? 'ok' : 'warn'
+  );
+  renderIncoming();
+}
+
+/* ─────────────── مراقب الحزم الخام ─────────────── */
+function logRaw(label, body, kind = '') {
+  state.rawCount += 1;
+  state.raw.unshift({ label, body, kind, ts: Date.now() });
+  if (state.raw.length > 40) state.raw.length = 40;
+}
+
+function renderIncoming() {
+  const box = $('#rawLog');
+  const count = $('#rawCount');
+  const evc = $('#evCount');
+  if (count) count.textContent = String(state.rawCount);
+  if (evc) evc.textContent = String(state.evCount);
+  if (!box) return;
+
+  if (!state.raw.length) {
+    box.innerHTML =
+      '<div class="raw-empty">ما وصلت أي حزمة بعد. إذا كنت لايف الآن وأرسلت هدية/متابعة وما ظهر شي هنا — يعني Streamlabs ما يرسل أحداث هالمنصة عبر Socket API.</div>';
+    return;
+  }
+
+  box.innerHTML = state.raw
+    .map((r) => {
+      const t = new Date(r.ts).toLocaleTimeString('en-GB', { hour12: false });
+      const tag = r.kind === 'ok' ? '<i class="raw-tag ok">محسوب</i>' : r.kind === 'warn' ? '<i class="raw-tag warn">غير معروف</i>' : '';
+      return `<div class="raw-row"><div class="raw-h"><span class="raw-t">${t}</span><b>${esc(r.label)}</b>${tag}</div><code>${esc(r.body)}</code></div>`;
+    })
+    .join('');
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/** إضافة يدوية — الحل المضمون لأي منصة */
+function manualAdd(seconds, label) {
+  const cap = state.settings.maxHours * 3600;
+  const added = state.timer.add(seconds, cap);
+  if (added > 0) {
+    state.stats.min += added / 60;
+    const ev = {
+      id: 'manual-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      platform: 'manual',
+      kind: 'manual',
+      name: label || 'إضافة يدوية',
+      detail: label || 'إضافة يدوية',
+      seconds: added,
+      amount: 0,
+      ts: Date.now(),
+    };
+    state.events.unshift(ev);
+    if (state.events.length > 60) state.events.length = 60;
+    renderFeed();
+    renderStats();
+    renderTimer();
+    blip(added);
+    persist();
+  }
+  if (added < seconds) toast('وصلت للسقف الأعلى للوقت', 'err');
+  return added;
+}
+
+/** حدث تجريبي يمر بنفس المسار الحقيقي */
+function fireTest(kind) {
+  const name = DEMO_NAMES[Math.floor(Math.random() * DEMO_NAMES.length)];
+  const payloads = {
+    follow: { type: 'follow', for: 'tiktok_account', message: [{ name, _id: 'test-' + Date.now() }] },
+    gift: {
+      type: 'gift',
+      for: 'tiktok_account',
+      message: [{ name, gift_name: 'Rose', diamond_count: 1, repeat_count: 5, _id: 'test-' + Date.now() }],
+    },
+    donation: { type: 'donation', for: 'streamlabs', message: [{ name, amount: '5', formatted_amount: '5 ريال', _id: 'test-' + Date.now() }] },
+  };
+  handlePayload(payloads[kind] || payloads.follow);
+  toast('وصل حدث تجريبي — شوف الأوفرلاي', 'ok');
 }
 
 /* ─────────────── الاتصال ─────────────── */
@@ -369,6 +459,13 @@ async function connect(token, { demo = false } = {}) {
 }
 
 sock.on('event', handlePayload);
+
+// كل حزمة تصل من Streamlabs تُسجَّل — حتى لو ما فهمناها
+sock.on('raw', (data) => {
+  if (data === '2' || data === '3' || data === '40' || data.startsWith('0')) return; // نبضات/فتح
+  logRaw('حزمة خام', data.slice(0, 600), '');
+  renderIncoming();
+});
 
 let reconnectAttempts = 0;
 let reconnectTimer = null;
@@ -780,6 +877,10 @@ function bind() {
     ['#setGift', 'perGift', 0],
     ['#setBits', 'perBits', 0],
     ['#setDon', 'perDonation', 0],
+    ['#setFollow', 'perFollow', 0],
+    ['#setShare', 'perShare', 0],
+    ['#setLike', 'perLike', 0],
+    ['#setDiamond', 'perDiamond', 0],
   ];
   map.forEach(([sel, key, min]) => {
     const el = $(sel);
@@ -917,6 +1018,28 @@ function bind() {
     toast('غرفة جديدة: ' + state.room, 'ok');
   });
 
+  // إضافة يدوية للوقت
+  $$('[data-add]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const secs = Number(btn.dataset.add) * 60;
+      const added = manualAdd(secs, 'إضافة يدوية من الاستوديو');
+      if (added > 0) toast(`+${human(added)}`, 'ok');
+    });
+  });
+
+  // أحداث تجريبية
+  $$('[data-test]').forEach((btn) => {
+    btn.addEventListener('click', () => fireTest(btn.dataset.test));
+  });
+
+  $('#btnClearRaw')?.addEventListener('click', () => {
+    state.raw = [];
+    state.rawCount = 0;
+    state.evCount = 0;
+    renderIncoming();
+    toast('تم تفريغ السجل', 'ok');
+  });
+
   // ظهور تدريجي
   const io = new IntersectionObserver((entries) => {
     entries.forEach((en) => {
@@ -941,6 +1064,10 @@ function fillSettings() {
   set('#setGift', s.perGift);
   set('#setBits', s.perBits);
   set('#setDon', s.perDonation);
+  set('#setFollow', s.perFollow);
+  set('#setShare', s.perShare);
+  set('#setLike', s.perLike);
+  set('#setDiamond', s.perDiamond);
   set('#setToken', '');
   $('#swSound')?.classList.toggle('on', s.sound);
   $('#swAlert')?.classList.toggle('on', s.alert);
@@ -988,6 +1115,7 @@ function pauseBeacon() {
 function boot() {
   bind();
   updateUrls();
+  renderIncoming();
   const rc = $('#roomCode');
   if (rc) rc.textContent = state.room;
 
