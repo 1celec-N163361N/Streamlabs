@@ -9,6 +9,17 @@ export const DEFAULTS = {
   perDonation: 60,  // ثواني لكل وحدة عملة
   sound: true,
   alert: true,
+  donationRules: [], // [{ amount: 5, seconds: 120 }]
+  overlay: {
+    accent: '#8b5cf6',
+    pos: 'bottom-center',
+    scale: 1,
+    opacity: 0.72,
+    radius: 20,
+    label: true,
+    live: true,
+    toast: true,
+  },
 };
 
 export function fmt(totalSeconds) {
@@ -72,14 +83,16 @@ export function normalize(payload, st) {
       detail = `${bits.toLocaleString('en-US')} بتس`;
     } else if (type === 'donation') {
       const amt = parseFloat(m.amount) || 0;
+      const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'donation';
-      seconds = Math.round(amt * st.perDonation);
-      detail = `${m.formatted_amount || amt} دونيشن`;
+      seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
+      detail = `${m.formatted_amount || amt} دونيشن${rule ? ' · قاعدة مخصصة' : ''}`;
     } else if (type === 'superchat') {
       const amt = (parseFloat(m.amount) || 0) / 1e6;
+      const rule = (st.donationRules || []).find((r) => Math.abs(Number(r.amount) - amt) < 0.01);
       kind = 'superchat';
-      seconds = Math.round(amt * st.perDonation);
-      detail = `${m.displayString || amt} سوبر شات`;
+      seconds = rule ? Number(rule.seconds) : Math.round(amt * st.perDonation);
+      detail = `${m.displayString || amt} سوبر شات${rule ? ' · قاعدة مخصصة' : ''}`;
     } else if (type === 'follow') {
       kind = 'follow';
       detail = 'متابعة جديدة';

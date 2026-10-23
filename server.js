@@ -1,12 +1,13 @@
 // سابا — سيرفر خفيف بدون أي مكتبات خارجية
 // يخدم الملفات الثابتة + يحفظ حالة كل غرفة ويبثّها للأوفرلاي عبر SSE
+// كل غرفة محمية برمز دخول: أول POST يسجّل الرمز، وأي تعديل بعده لازم يطابقه
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = Number(process.env.PORT || 4173);
 const ROOT = __dirname;
-const rooms = new Map(); // roomId -> { state, clients:Set<res> }
+const rooms = new Map(); // roomId -> { state, clients:Set<res>, pin }
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -25,14 +26,14 @@ function json(res, code, obj) {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
     'access-control-allow-origin': '*',
-    'access-control-allow-headers': 'content-type',
+    'access-control-allow-headers': 'content-type, x-room-pin',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
   });
   res.end(body);
 }
 
 function getRoom(id) {
-  if (!rooms.has(id)) rooms.set(id, { state: null, clients: new Set() });
+  if (!rooms.has(id)) rooms.set(id, { state: null, clients: new Set(), pin: null });
   return rooms.get(id);
 }
 
@@ -50,7 +51,7 @@ function readBody(req) {
     let data = '';
     req.on('data', (c) => {
       data += c;
-      if (data.length > 400000) req.destroy();
+      if (data.length > 600000) req.destroy();
     });
     req.on('end', () => {
       try { resolve(JSON.parse(data || '{}')); } catch (_) { resolve({}); }
@@ -64,13 +65,29 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'OPTIONS') return json(res, 204, {});
 
-  // حالة الغرفة
+  // حالة الغرفة (قراءة عامة — الأوفرلاي وصفحة المشاهدين)
   if (p === '/api/state') {
     const roomId = (url.searchParams.get('room') || 'default').slice(0, 40);
     if (req.method === 'GET') return json(res, 200, getRoom(roomId).state || { empty: true });
+
     if (req.method === 'POST') {
       const body = await readBody(req);
+      const pin = String(body.pin || req.headers['x-room-pin'] || '').trim();
       const room = getRoom(roomId);
+
+      if (!room.pin) {
+        if (!pin) return json(res, 400, { error: 'pin_required', message: 'هذه الغرفة تحتاج رمز دخول' });
+        room.pin = pin;
+      } else if (room.pin !== pin) {
+        return json(res, 403, { error: 'bad_pin', message: 'رمز الدخول غير صحيح' });
+      }
+
+      // تغيير الرمز من داخل الاستوديو (يتطلب الرمز الحالي)
+      if (body.newPin) {
+        const np = String(body.newPin).trim();
+        if (/^\d{4,6}$/.test(np)) room.pin = np;
+      }
+
       room.state = body.state || null;
       broadcast(roomId);
       return json(res, 200, { ok: true });

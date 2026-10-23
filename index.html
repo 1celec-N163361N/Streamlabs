@@ -355,69 +355,191 @@
     <button class="btn ghost xs" id="drawerClose">إغلاق</button>
   </div>
   <div class="drawer-body">
-    <div class="field-row">
-      <div class="field">
-        <label>وقت البداية (دقيقة)</label>
-        <input class="input" id="setStart" type="number" min="1" max="1440" />
+
+    <div class="dsec">
+      <div class="dsec-t">الوقت</div>
+      <div class="field-row">
+        <div class="field">
+          <label>وقت البداية (دقيقة)</label>
+          <input class="input" id="setStart" type="number" min="1" max="1440" />
+        </div>
+        <div class="field">
+          <label>الحد الأعلى (ساعة)</label>
+          <input class="input" id="setMax" type="number" min="1" max="72" />
+        </div>
       </div>
       <div class="field">
-        <label>الحد الأعلى (ساعة)</label>
-        <input class="input" id="setMax" type="number" min="1" max="72" />
+        <label>كل سبسكريب (ثانية)</label>
+        <input class="input" id="setSub" type="number" min="0" />
+        <div class="hint">٣٠٠ ثانية = ٥ دقائق</div>
+      </div>
+      <div class="field">
+        <label>كل جفت سب (ثانية)</label>
+        <input class="input" id="setGift" type="number" min="0" />
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>كل ١٠٠ بتس (ثانية)</label>
+        <input class="input" id="setBits" type="number" min="0" />
       </div>
     </div>
-    <div class="field">
-      <label>كل سبسكريب (ثانية)</label>
-      <input class="input" id="setSub" type="number" min="0" />
-      <div class="hint">٣٠٠ ثانية = ٥ دقائق</div>
-    </div>
-    <div class="field">
-      <label>كل جفت سب (ثانية)</label>
-      <input class="input" id="setGift" type="number" min="0" />
-    </div>
-    <div class="field">
-      <label>كل ١٠٠ بتس (ثانية)</label>
-      <input class="input" id="setBits" type="number" min="0" />
-    </div>
-    <div class="field">
-      <label>كل وحدة عملة في الدونيشن (ثانية)</label>
-      <input class="input" id="setDon" type="number" min="0" />
-      <div class="hint">مثال: ٦٠ ثانية × ٢٥ ريال = ٢٥ دقيقة</div>
-    </div>
-    <div class="switch-row">
-      <span>صوت عند كل دعم</span>
-      <button class="switch" id="swSound" aria-label="صوت"></button>
-    </div>
-    <div class="switch-row">
-      <span>تنبيه على الشاشة (أوفرلاي)</span>
-      <button class="switch on" id="swAlert" aria-label="تنبيه"></button>
-    </div>
-    <div class="field" style="margin-top:18px">
-      <label>رابط الأوفرلاي لـ OBS</label>
-      <div class="token-field" style="margin-bottom:8px">
-        <input id="overlayUrl" readonly dir="ltr" style="font-size:11.5px" />
-        <button class="btn ghost xs" id="btnCopyOverlay">نسخ</button>
+
+    <div class="dsec">
+      <div class="dsec-t">الدونيشن</div>
+      <div class="field">
+        <label>المعدل العام — كل ١ عملة = كم ثانية؟</label>
+        <input class="input" id="setDon" type="number" min="0" />
+        <div class="hint">يُطبَّق على أي مبلغ ما له قاعدة مخصصة. مثال: ٦٠ × ٢٥ ريال = ٢٥ دقيقة.</div>
       </div>
-      <div class="hint">أضفه في OBS كمصدر «Browser» بمقاس ٨٠٠×٢٠٠ وخلفية شفافة.</div>
-    </div>
-    <div class="field">
-      <label>رابط المشاهدين</label>
-      <div class="token-field" style="margin-bottom:8px">
-        <input id="watchUrl" readonly dir="ltr" style="font-size:11.5px" />
-        <button class="btn ghost xs" id="btnCopyWatch">نسخ</button>
+      <label class="form-label" style="margin-top:16px">قواعد مخصصة لكل مبلغ</label>
+      <div class="rules" id="rulesList"></div>
+      <div class="rule-add">
+        <input class="input" id="ruleAmount" type="number" min="0" step="0.5" placeholder="المبلغ" />
+        <input class="input" id="ruleSeconds" type="number" min="0" placeholder="ثانية" />
+        <button class="btn ghost xs" id="btnAddRule">إضافة</button>
       </div>
-      <div class="hint">شاركه مع جمهورك — يفتحون الرابط ويشوفون العدّاد مباشرة.</div>
+      <div class="hint">مثال: ٥ ريال = ١٢٠ ثانية، ٥٠ ريال = ٩٠٠ ثانية.</div>
     </div>
-    <div class="field">
-      <label>تغيير التوكن</label>
-      <input class="input" id="setToken" type="password" dir="ltr" placeholder="Socket API Token" />
+
+    <div class="dsec">
+      <div class="dsec-t">شكل الأوفرلاي</div>
+      <div class="ov-preview" id="ovPreview">
+        <div class="ov-pv-card" id="ovPvCard">
+          <div class="ov-pv-digits" id="ovPvDigits">01:24:07</div>
+          <div class="ov-pv-side">
+            <span class="pv-live" id="ovPvLive"><i></i>LIVE</span>
+            <span class="pv-lab" id="ovPvLab">الوقت المتبقي</span>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>اللون الأساسي</label>
+        <div class="swatches" id="swatches">
+          <button data-color="#8b5cf6" style="background:#8b5cf6" aria-label="بنفسجي"></button>
+          <button data-color="#22d3ee" style="background:#22d3ee" aria-label="سماوي"></button>
+          <button data-color="#fbbf24" style="background:#fbbf24" aria-label="ذهبي"></button>
+          <button data-color="#34d399" style="background:#34d399" aria-label="أخضر"></button>
+          <button data-color="#f472b6" style="background:#f472b6" aria-label="وردي"></button>
+          <button data-color="#ffffff" style="background:#ffffff" aria-label="أبيض"></button>
+        </div>
+      </div>
+      <div class="field">
+        <label>الموضع</label>
+        <select class="input" id="ovPos">
+          <option value="bottom-center">أسفل الوسط</option>
+          <option value="bottom-right">أسفل اليمين</option>
+          <option value="bottom-left">أسفل اليسار</option>
+          <option value="top-center">أعلى الوسط</option>
+          <option value="top-right">أعلى اليمين</option>
+          <option value="top-left">أعلى اليسار</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>الحجم <span class="val" id="valScale">100%</span></label>
+        <input class="range" id="ovScale" type="range" min="0.6" max="1.8" step="0.05" value="1" />
+      </div>
+      <div class="field">
+        <label>شفافية الخلفية <span class="val" id="valOpacity">72%</span></label>
+        <input class="range" id="ovOpacity" type="range" min="0.2" max="1" step="0.02" value="0.72" />
+      </div>
+      <div class="field">
+        <label>استدارة الحواف <span class="val" id="valRadius">20</span></label>
+        <input class="range" id="ovRadius" type="range" min="0" max="34" step="1" value="20" />
+      </div>
+      <div class="switch-row">
+        <span>إظهار شارة LIVE</span>
+        <button class="switch on" id="swOvLive"></button>
+      </div>
+      <div class="switch-row">
+        <span>إظهار النص تحت الوقت</span>
+        <button class="switch on" id="swOvLabel"></button>
+      </div>
     </div>
-    <div class="drawer-note">
-      <b>ملاحظة:</b> الإعدادات تُحفظ محليًا في متصفحك. لو غيّرت التوكن، أعد الاتصال من الزر بالأسفل.
+
+    <div class="dsec">
+      <div class="dsec-t">التنبيهات</div>
+      <div class="switch-row">
+        <span>صوت عند كل دعم</span>
+        <button class="switch" id="swSound" aria-label="صوت"></button>
+      </div>
+      <div class="switch-row">
+        <span>تنبيه على الشاشة (أوفرلاي)</span>
+        <button class="switch on" id="swAlert" aria-label="تنبيه"></button>
+      </div>
     </div>
-    <button class="btn primary" id="btnReconnect" style="width:100%;margin-top:14px">إعادة الاتصال</button>
-    <button class="btn ghost" id="btnDemoToggle" style="width:100%;margin-top:8px">تشغيل الوضع التجريبي</button>
+
+    <div class="dsec">
+      <div class="dsec-t">الأمان</div>
+      <div class="field">
+        <label>رمز الدخول الحالي</label>
+        <div class="token-field" style="margin-bottom:8px">
+          <input id="pinView" readonly dir="ltr" style="letter-spacing:4px" />
+          <button class="btn ghost xs" id="btnShowPin">إظهار</button>
+        </div>
+        <div class="hint">بدونه ما يقدر أحد يفتح الاستوديو ولا يعدّل العدّاد.</div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>رمز جديد (٤-٦ أرقام)</label>
+          <input class="input" id="newPin" type="password" inputmode="numeric" maxlength="6" dir="ltr" placeholder="••••" />
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <button class="btn ghost" id="btnChangePin" style="width:100%">تغيير</button>
+        </div>
+      </div>
+      <button class="btn ghost" id="btnNewRoom" style="width:100%">نقل لغرفة جديدة</button>
+      <div class="hint" style="margin-top:8px">لو نسيت الرمز: الغرفة الجديدة تعطيك رمزًا جديدًا ورابط أوفرلاي جديد.</div>
+    </div>
+
+    <div class="dsec">
+      <div class="dsec-t">الروابط والتوكن</div>
+      <div class="field">
+        <label>رابط الأوفرلاي لـ OBS</label>
+        <div class="token-field" style="margin-bottom:8px">
+          <input id="overlayUrl" readonly dir="ltr" style="font-size:11.5px" />
+          <button class="btn ghost xs" id="btnCopyOverlay">نسخ</button>
+        </div>
+        <div class="hint">أضفه في OBS كمصدر «Browser» بمقاس ٨٠٠×٢٠٠ وخلفية شفافة.</div>
+      </div>
+      <div class="field">
+        <label>رابط المشاهدين</label>
+        <div class="token-field" style="margin-bottom:8px">
+          <input id="watchUrl" readonly dir="ltr" style="font-size:11.5px" />
+          <button class="btn ghost xs" id="btnCopyWatch">نسخ</button>
+        </div>
+        <div class="hint">شاركه مع جمهورك — يفتحون الرابط ويشوفون العدّاد مباشرة.</div>
+      </div>
+      <div class="field">
+        <label>تغيير التوكن</label>
+        <input class="input" id="setToken" type="password" dir="ltr" placeholder="Socket API Token" />
+      </div>
+      <div class="drawer-note">
+        <b>ملاحظة:</b> الإعدادات تُحفظ محليًا في متصفحك. لو غيّرت التوكن، أعد الاتصال من الزر بالأسفل.
+      </div>
+      <button class="btn primary" id="btnReconnect" style="width:100%;margin-top:14px">إعادة الاتصال</button>
+      <button class="btn ghost" id="btnDemoToggle" style="width:100%;margin-top:8px">تشغيل الوضع التجريبي</button>
+    </div>
   </div>
 </aside>
+
+<!-- ══════════ شاشة القفل ══════════ -->
+<div class="lock" id="lock">
+  <div class="lock-box">
+    <div class="lock-badge">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="10" width="16" height="11" rx="2.5" />
+        <path d="M8 10V7a4 4 0 018 0v3" />
+        <circle cx="12" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+      </svg>
+    </div>
+    <h2 id="lockTitle">هذه النسخة محمية</h2>
+    <p id="lockDesc">أدخل رمز الدخول عشان تفتح الاستوديو وتتحكم بالعدّاد.</p>
+    <input class="lock-input" id="lockPin" type="password" inputmode="numeric" maxlength="6" placeholder="••••" dir="ltr" autocomplete="off" spellcheck="false" />
+    <div class="lock-err" id="lockErr"></div>
+    <button class="btn primary" id="btnUnlock" style="width:100%">دخول</button>
+    <div class="lock-alt" id="lockAlt">أول مرة على هذه النسخة؟ <button id="btnCreatePin">أنشئ رمزك</button></div>
+    <div class="lock-foot">الرابط المفتوح ما يكفي — الرمز يمنع أي أحد يعدّل عدّادك.</div>
+  </div>
+</div>
 
 <!-- ══════════ مودال الشرح ══════════ -->
 <div class="modal" id="helpModal">

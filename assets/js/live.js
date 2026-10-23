@@ -29,6 +29,40 @@ function setConn(ok, text) {
   if (s) s.textContent = text;
 }
 
+function hexToRgba(hex, alpha) {
+  const h = String(hex || '').replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return `rgba(139, 92, 246, ${alpha})`;
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** يطبّق إعدادات شكل الأوفرلاي القادمة من الاستوديو */
+function applyOverlay(o) {
+  if (!o) return;
+  const root = document.documentElement;
+  const accent = o.accent || '#8b5cf6';
+  root.style.setProperty('--ov-accent', accent);
+  root.style.setProperty('--ov-accent-soft', hexToRgba(accent, 0.5));
+  root.style.setProperty('--ov-opacity', String(o.opacity ?? 0.72));
+  root.style.setProperty('--ov-radius', `${o.radius ?? 20}px`);
+  root.style.setProperty('--ov-scale', String(o.scale ?? 1));
+
+  const stage = $('#ovStage');
+  if (stage) stage.className = 'ov-stage pos-' + (o.pos || 'bottom-center');
+
+  const card = $('#ovCard');
+  if (card) {
+    card.classList.toggle('hide-live', o.live === false);
+    card.classList.toggle('hide-label', o.label === false);
+  }
+  const toast = $('#ovToast');
+  if (toast) toast.classList.toggle('bottom', String(o.pos || '').startsWith('top'));
+}
+
 function remaining() {
   if (!st) return 0;
   if (st.running) return Math.max(0, (st.endsAt - Date.now()) / 1000);
@@ -127,6 +161,8 @@ function showToast(ev) {
 function apply(next) {
   if (!next || next.empty || !next.room) return;
   st = next;
+
+  applyOverlay(st.settings?.overlay);
 
   const card = $('#ovCard');
   if (card) card.classList.add('in');

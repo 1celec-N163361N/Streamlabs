@@ -18,21 +18,40 @@ function loadStore() {
 }
 
 const saved = loadStore();
+const savedSettings = saved.settings || {};
 
 const state = {
   token: saved.token || '',
   room: saved.room || makeRoom(),
-  settings: { ...DEFAULTS, ...(saved.settings || {}) },
+  pin: saved.pin || '',
+  settings: {
+    ...DEFAULTS,
+    ...savedSettings,
+    overlay: { ...DEFAULTS.overlay, ...(savedSettings.overlay || {}) },
+    donationRules: Array.isArray(savedSettings.donationRules) ? savedSettings.donationRules : [],
+  },
   timer: new Timer(saved.timer || {}),
   events: Array.isArray(saved.events) ? saved.events : [],
   seen: new Set(Array.isArray(saved.seen) ? saved.seen : []),
   stats: saved.stats || { subs: 0, bits: 0, don: 0, min: 0 },
   conn: 'idle',
   demo: false,
-  demoHit: 0,
+  lastSeen: Number(saved.lastSeen) || 0,
+  resumeGap: 0,
 };
 
 if (!state.timer.base) state.timer.reset(state.settings.startMin * 60);
+
+// ── استئناف من حيث توقف: لو التبويب انسدّ وهو شغّال، ما نحسب وقت الغياب
+const endedAt = Number((() => { try { return localStorage.getItem('saba.ended') || 0; } catch (_) { return 0; } })());
+if (state.timer.running && endedAt) {
+  const gap = Date.now() - endedAt;
+  if (gap > 3000) {
+    state.timer.endsAt += gap;
+    state.resumeGap = gap;
+  }
+  try { localStorage.removeItem('saba.ended'); } catch (_) {}
+}
 
 const sock = new StreamlabsSocket();
 
@@ -86,25 +105,36 @@ function blip(seconds) {
 
 /* ─────────────── المزامنة مع السيرفر ─────────────── */
 let saveTimer = null;
+
+function snapshot() {
+  state.lastSeen = Date.now();
+  return {
+    token: state.token,
+    room: state.room,
+    pin: state.pin,
+    settings: state.settings,
+    timer: {
+      running: state.timer.running,
+      endsAt: state.timer.endsAt,
+      remainingMs: state.timer.remainingMs,
+      added: state.timer.added,
+      base: state.timer.base,
+    },
+    events: state.events.slice(0, 20),
+    seen: Array.from(state.seen).slice(-400),
+    stats: state.stats,
+    lastSeen: state.lastSeen,
+  };
+}
+
+function saveLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(snapshot())); } catch (_) {}
+}
+
 function persist() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const payload = {
-      token: state.token,
-      room: state.room,
-      settings: state.settings,
-      timer: {
-        running: state.timer.running,
-        endsAt: state.timer.endsAt,
-        remainingMs: state.timer.remainingMs,
-        added: state.timer.added,
-        base: state.timer.base,
-      },
-      events: state.events.slice(0, 20),
-      seen: Array.from(state.seen).slice(-400),
-      stats: state.stats,
-    };
-    try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch (_) {}
+    saveLocal();
     syncServer();
   }, 200);
 }
@@ -117,7 +147,11 @@ function publicState() {
     remainingMs: state.timer.remainingMs,
     added: state.timer.added,
     base: state.timer.base,
-    settings: { alert: state.settings.alert, maxHours: state.settings.maxHours },
+    settings: {
+      alert: state.settings.alert,
+      maxHours: state.settings.maxHours,
+      overlay: state.settings.overlay,
+    },
     stats: state.stats,
     events: state.events.slice(0, 12),
     lastEvent: state.events[0] || null,
@@ -126,11 +160,11 @@ function publicState() {
 }
 
 function syncServer() {
-  fetch(`/api/state?room=${encodeURIComponent(state.room)}`, {
+  return fetch(`/api/state?room=${encodeURIComponent(state.room)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ state: publicState() }),
-  }).catch(() => {});
+    body: JSON.stringify({ pin: state.pin, state: publicState() }),
+  }).catch(() => null);
 }
 
 /* ─────────────── واجهة العدّاد ─────────────── */
@@ -417,6 +451,186 @@ function stopDemo() {
   if (btn) btn.textContent = 'تشغيل الوضع التجريبي';
 }
 
+/* ─────────────── شاشة القفل ─────────────── */
+let lockMode = 'enter';
+
+function shakeLock() {
+  const lock = $('#lock');
+  if (!lock) return;
+  lock.classList.remove('shake');
+  void lock.offsetWidth;
+  lock.classList.add('shake');
+}
+
+function showLock(mode = 'enter') {
+  lockMode = mode;
+  const lock = $('#lock');
+  if (!lock) return;
+  const title = $('#lockTitle');
+  const desc = $('#lockDesc');
+  const btn = $('#btnUnlock');
+  const alt = $('#lockAlt');
+  const err = $('#lockErr');
+  const input = $('#lockPin');
+
+  err.textContent = '';
+  input.value = '';
+
+  if (mode === 'create') {
+    title.textContent = 'أنشئ رمز الدخول';
+    desc.textContent = '٤ أرقام على الأقل. احفظه — تحتاجه لو فتحت الاستوديو من جهاز ثاني.';
+    btn.textContent = 'حفظ وبدء';
+    alt.style.display = 'none';
+  } else {
+    title.textContent = 'هذه النسخة محمية';
+    desc.textContent = 'أدخل رمز الدخول عشان تفتح الاستوديو وتتحكم بالعدّاد.';
+    btn.textContent = 'دخول';
+    alt.style.display = '';
+  }
+
+  lock.classList.add('on');
+  setTimeout(() => input.focus(), 180);
+}
+
+function hideLock() {
+  $('#lock')?.classList.remove('on');
+}
+
+async function submitLock() {
+  const input = $('#lockPin');
+  const err = $('#lockErr');
+  const pin = (input.value || '').trim();
+
+  if (!/^\d{4,6}$/.test(pin)) {
+    err.textContent = 'الرمز لازم يكون من ٤ إلى ٦ أرقام';
+    shakeLock();
+    return;
+  }
+
+  if (lockMode === 'create') {
+    state.pin = pin;
+    saveLocal();
+    hideLock();
+    syncServer();
+    toast('تم إنشاء رمز الدخول', 'ok');
+    return;
+  }
+
+  const prev = state.pin;
+  state.pin = pin;
+  const res = await syncServer();
+  if (res && res.status === 403) {
+    state.pin = prev;
+    err.textContent = 'الرمز غير صحيح';
+    shakeLock();
+    return;
+  }
+  saveLocal();
+  hideLock();
+}
+
+/* ─────────────── قواعد الدونيشن ─────────────── */
+function renderRules() {
+  const list = $('#rulesList');
+  if (!list) return;
+  list.innerHTML = '';
+  const rules = [...state.settings.donationRules].sort((a, b) => a.amount - b.amount);
+
+  rules.forEach((r) => {
+    const row = document.createElement('div');
+    row.className = 'rule-row';
+
+    const amt = document.createElement('span');
+    amt.className = 'r-amt';
+    amt.textContent = String(r.amount);
+
+    const eq = document.createElement('span');
+    eq.textContent = '=';
+    eq.style.color = '#4f4f63';
+
+    const sec = document.createElement('span');
+    sec.className = 'r-sec';
+    sec.textContent = human(r.seconds);
+
+    const del = document.createElement('button');
+    del.className = 'r-del';
+    del.type = 'button';
+    del.textContent = '✕';
+    del.title = 'حذف';
+    del.addEventListener('click', () => {
+      state.settings.donationRules = state.settings.donationRules.filter((x) => x !== r);
+      renderRules();
+      persist();
+    });
+
+    row.append(amt, eq, sec, del);
+    list.appendChild(row);
+  });
+}
+
+function addRule() {
+  const a = Number($('#ruleAmount').value);
+  const s = Number($('#ruleSeconds').value);
+  if (!(a > 0) || !(s > 0)) return toast('أدخل مبلغًا وثواني صحيحة', 'err');
+
+  const exists = state.settings.donationRules.find((r) => Math.abs(r.amount - a) < 0.01);
+  if (exists) exists.seconds = s;
+  else state.settings.donationRules.push({ amount: a, seconds: s });
+
+  $('#ruleAmount').value = '';
+  $('#ruleSeconds').value = '';
+  renderRules();
+  persist();
+  toast('تمت إضافة القاعدة', 'ok');
+}
+
+/* ─────────────── شكل الأوفرلاي ─────────────── */
+function hexToRgba(hex, alpha) {
+  const h = String(hex || '').replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return `rgba(139, 92, 246, ${alpha})`;
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+function updatePreview() {
+  const o = state.settings.overlay;
+  const card = $('#ovPvCard');
+  if (!card) return;
+
+  card.style.setProperty('--pv-accent', o.accent);
+  card.style.setProperty('--pv-accent-soft', hexToRgba(o.accent, 0.5));
+  card.style.setProperty('--pv-opacity', String(o.opacity));
+  card.style.setProperty('--pv-radius', `${o.radius}px`);
+  card.style.setProperty('--pv-scale', String(0.72 * o.scale));
+
+  const live = $('#ovPvLive');
+  if (live) live.style.display = o.live === false ? 'none' : '';
+  const lab = $('#ovPvLab');
+  if (lab) lab.style.display = o.label === false ? 'none' : '';
+
+  const set = (sel, v) => { const el = $(sel); if (el) el.textContent = v; };
+  set('#valScale', Math.round(o.scale * 100) + '%');
+  set('#valOpacity', Math.round(o.opacity * 100) + '%');
+  set('#valRadius', String(o.radius));
+
+  $$('#swatches button').forEach((b) => {
+    b.classList.toggle('on', String(b.dataset.color).toLowerCase() === String(o.accent).toLowerCase());
+  });
+}
+
+function applyOverlayInputs() {
+  const o = state.settings.overlay;
+  const set = (sel, v) => { const el = $(sel); if (el) el.value = v; };
+  set('#ovPos', o.pos);
+  set('#ovScale', o.scale);
+  set('#ovOpacity', o.opacity);
+  set('#ovRadius', o.radius);
+  $('#swOvLive')?.classList.toggle('on', o.live !== false);
+  $('#swOvLabel')?.classList.toggle('on', o.label !== false);
+  updatePreview();
+}
+
 /* ─────────────── الروابط ─────────────── */
 function updateUrls() {
   const base = location.origin;
@@ -606,6 +820,103 @@ function bind() {
     else startDemo();
   });
 
+  // ── القفل
+  $('#btnUnlock')?.addEventListener('click', submitLock);
+  $('#lockPin')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitLock(); });
+  $('#lockPin')?.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+  });
+  $('#btnCreatePin')?.addEventListener('click', () => showLock('create'));
+
+  // ── قواعد الدونيشن
+  $('#btnAddRule')?.addEventListener('click', addRule);
+  $('#ruleAmount')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#ruleSeconds')?.focus(); });
+  $('#ruleSeconds')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') addRule(); });
+
+  // ── شكل الأوفرلاي
+  $$('#swatches button').forEach((b) => {
+    b.addEventListener('click', () => {
+      state.settings.overlay.accent = b.dataset.color;
+      updatePreview();
+      persist();
+    });
+  });
+  $('#ovPos')?.addEventListener('change', (e) => {
+    state.settings.overlay.pos = e.target.value;
+    persist();
+  });
+  const bindRange = (sel, key, fmtVal) => {
+    const el = $(sel);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      state.settings.overlay[key] = Number(el.value);
+      const out = $(fmtVal);
+      if (out) out.textContent = key === 'radius' ? el.value : Math.round(Number(el.value) * 100) + '%';
+      updatePreview();
+    });
+    el.addEventListener('change', () => persist());
+  };
+  bindRange('#ovScale', 'scale', '#valScale');
+  bindRange('#ovOpacity', 'opacity', '#valOpacity');
+  bindRange('#ovRadius', 'radius', '#valRadius');
+
+  $('#swOvLive')?.addEventListener('click', (e) => {
+    const on = state.settings.overlay.live === false;
+    state.settings.overlay.live = on;
+    e.currentTarget.classList.toggle('on', on);
+    updatePreview();
+    persist();
+  });
+  $('#swOvLabel')?.addEventListener('click', (e) => {
+    const on = state.settings.overlay.label === false;
+    state.settings.overlay.label = on;
+    e.currentTarget.classList.toggle('on', on);
+    updatePreview();
+    persist();
+  });
+
+  // ── الأمان
+  $('#btnShowPin')?.addEventListener('click', (e) => {
+    const pv = $('#pinView');
+    if (!pv) return;
+    const shown = pv.dataset.shown === '1';
+    pv.value = shown ? '••••' : (pv.dataset.real || '—');
+    pv.dataset.shown = shown ? '0' : '1';
+    e.currentTarget.textContent = shown ? 'إظهار' : 'إخفاء';
+  });
+
+  $('#btnChangePin')?.addEventListener('click', async () => {
+    const np = ($('#newPin').value || '').trim();
+    if (!/^\d{4,6}$/.test(np)) return toast('الرمز لازم يكون ٤ إلى ٦ أرقام', 'err');
+    const res = await fetch(`/api/state?room=${encodeURIComponent(state.room)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pin: state.pin, newPin: np, state: publicState() }),
+    }).catch(() => null);
+    if (res && res.status === 403) return toast('الرمز الحالي غير مطابق — أعد فتح الصفحة', 'err');
+    state.pin = np;
+    $('#newPin').value = '';
+    saveLocal();
+    fillSettings();
+    toast('تم تغيير رمز الدخول', 'ok');
+  });
+
+  $('#btnNewRoom')?.addEventListener('click', () => {
+    state.room = makeRoom();
+    state.pin = String(Math.floor(1000 + Math.random() * 9000));
+    state.seen.clear();
+    state.events = [];
+    state.stats = { subs: 0, bits: 0, don: 0, min: 0 };
+    saveLocal();
+    syncServer();
+    const rc = $('#roomCode');
+    if (rc) rc.textContent = state.room;
+    fillSettings();
+    renderFeed();
+    renderStats();
+    toast('غرفة جديدة: ' + state.room, 'ok');
+  });
+
   // ظهور تدريجي
   const io = new IntersectionObserver((entries) => {
     entries.forEach((en) => {
@@ -633,6 +944,18 @@ function fillSettings() {
   set('#setToken', '');
   $('#swSound')?.classList.toggle('on', s.sound);
   $('#swAlert')?.classList.toggle('on', s.alert);
+
+  const pv = $('#pinView');
+  if (pv) {
+    pv.value = '••••';
+    pv.dataset.real = state.pin || '—';
+    pv.dataset.shown = '0';
+  }
+  const showBtn = $('#btnShowPin');
+  if (showBtn) showBtn.textContent = 'إظهار';
+
+  renderRules();
+  applyOverlayInputs();
   updateUrls();
 }
 
@@ -649,12 +972,34 @@ function animateMock() {
   }, 1000);
 }
 
+function pauseBeacon() {
+  if (!state.pin) return;
+  const st = publicState();
+  st.running = false;
+  st.remainingMs = state.timer.remaining * 1000;
+  st.endsAt = 0;
+  try {
+    const body = new Blob([JSON.stringify({ pin: state.pin, state: st })], { type: 'application/json' });
+    navigator.sendBeacon(`/api/state?room=${encodeURIComponent(state.room)}`, body);
+  } catch (_) {}
+}
+
 /* ─────────────── التشغيل ─────────────── */
 function boot() {
   bind();
   updateUrls();
   const rc = $('#roomCode');
   if (rc) rc.textContent = state.room;
+
+  // القفل
+  if (state.pin) hideLock();
+  else showLock('enter');
+
+  if (state.resumeGap > 3000) {
+    setTimeout(() => {
+      toast(`العدّاد كمّل من حيث توقف — ${human(state.resumeGap / 1000)} كانت موقوفة`, 'ok');
+    }, 900);
+  }
 
   // حلقة العرض
   setInterval(() => {
@@ -685,6 +1030,21 @@ function boot() {
   if (new URLSearchParams(location.search).get('demo') === '1') {
     setTimeout(() => connect('', { demo: true }), 500);
   }
+
+  // نبضة الحفظ + التعامل مع إغلاق التبويب
+  setInterval(saveLocal, 3000);
+
+  window.addEventListener('pagehide', () => {
+    saveLocal();
+    try { localStorage.setItem('saba.ended', String(Date.now())); } catch (_) {}
+    pauseBeacon();
+  });
+
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+      try { localStorage.removeItem('saba.ended'); } catch (_) {}
+    }
+  });
 }
 
 boot();
