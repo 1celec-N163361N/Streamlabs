@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>سابا — عدّاد السابثون اللي يزيد مع كل دعم</title>
+<meta name="description" content="اربط حسابك في Streamlabs خلال ٣٠ ثانية، وكل سبسكريب أو بتس أو دونيشن يزيد الوقت مباشرة على بثّك. أوفرلاي OBS جاهز." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%238b5cf6'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M16 11v5l3.5 2' stroke='white' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<div class="aurora"><i></i><i></i><i></i></div>
+<div class="grain"></div>
+
+<!-- ══════════ شريط التنقل ══════════ -->
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="brand">
+      <span class="brand-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9" /><path d="M12 7v5.5l3.5 2" />
+        </svg>
+      </span>
+      <span>سابا</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#connect">الربط السريع</a>
+      <a href="#features">المزايا</a>
+      <a href="#how">كيف يعمل</a>
+    </nav>
+    <div class="nav-cta">
+      <button class="btn ghost sm" data-scroll="#connect">جرّب الآن</button>
+      <button class="btn primary sm" id="navStart">ابدأ الربط</button>
+    </div>
+  </div>
+</header>
+
+<main id="landing">
+  <!-- ══════════ الهيرو ══════════ -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="pill"><span class="dot"></span> يعمل مع Streamlabs · Twitch · YouTube</div>
+        <h1>كل دعم…<br />يزيد <span class="grad">وقتك</span> على البث</h1>
+        <p class="lead">
+          عدّاد سابثون مباشر يشتغل لحاله. كل سبسكريب، بتس، أو دونيشن يضيف وقت فورًا على الشاشة —
+          بدون كود، وبدون إعدادات معقّدة. ربط واحد ويكون جاهز.
+        </p>
+        <div class="hero-actions">
+          <button class="btn primary" data-scroll="#connect">
+            اربط حسابي الآن
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          </button>
+          <button class="btn ghost" id="btnDemoHero">جرّب العرض التجريبي</button>
+        </div>
+        <div class="hero-trust">
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            بدون تسجيل
+          </span>
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            التوكن يبقى عندك
+          </span>
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            أوفرلاي جاهز
+          </span>
+        </div>
+      </div>
+
+      <div class="mock">
+        <div class="chip-float a">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          5:00 سبسكريب
+        </div>
+        <div class="chip-float b">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          2:30 دونيشن
+        </div>
+
+        <div class="mock-top">
+          <span class="mock-live"><span class="dot"></span> مباشر الآن</span>
+          <span class="mock-room">ROOM · 7F2A</span>
+        </div>
+        <div class="mock-timer" id="mockTimer">02:14:38</div>
+        <div class="mock-label">الوقت المتبقي — الهدف ٦ ساعات</div>
+        <div class="mock-bar"><i id="mockBar"></i></div>
+        <div class="mock-feed">
+          <div class="mock-row">
+            <span class="av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">ن</span>
+            <span class="nm">نورة — سبسكريب جديد</span>
+            <span class="plus">+5:00</span>
+          </div>
+          <div class="mock-row">
+            <span class="av" style="background:linear-gradient(135deg,#0891b2,#0e7490)">خ</span>
+            <span class="nm">خالد — ٥٠٠ بتس</span>
+            <span class="plus">+8:20</span>
+          </div>
+          <div class="mock-row">
+            <span class="av" style="background:linear-gradient(135deg,#be185d,#9d174d)">س</span>
+            <span class="nm">سارة — دونيشن ٢٥ ريال</span>
+            <span class="plus">+12:30</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ الربط ══════════ -->
+  <section class="connect" id="connect">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">الربط السريع</div>
+        <h2>ثلاث خطوات… وتكون شغّال</h2>
+        <p>ما نبني لك حساب ولا نطلب بريد. توكن Streamlabs هو كل اللي نحتاجه.</p>
+      </div>
+
+      <div class="connect-card reveal">
+        <div class="connect-steps">
+          <div class="step">
+            <div class="step-n">١</div>
+            <div>
+              <h4>افتح إعدادات API في Streamlabs</h4>
+              <p>من لوحة التحكم: <code>Settings</code> ثم <code>API Settings</code>.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">٢</div>
+            <div>
+              <h4>انسخ الـ Socket API Token</h4>
+              <p>مو الـ API Token العادي — اللي تحت مكتوب عليه <code>Socket API Token</code>.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-n">٣</div>
+            <div>
+              <h4>الصقه هنا وابدأ</h4>
+              <p>الاتصال يصير من متصفحك مباشرة، والعدّاد يبدأ يستقبل الأحداث فورًا.</p>
+            </div>
+          </div>
+          <div class="connect-alt">
+            <span>ما لقيت التوكن؟</span>
+            <button id="openHelp">افتح الشرح المصوّر</button>
+          </div>
+        </div>
+
+        <div class="connect-form">
+          <label class="form-label" for="tokenInput">Socket API Token</label>
+          <div class="token-field">
+            <input id="tokenInput" type="password" placeholder="eyJ0eXAiOiJKV1QiLCJhbGci…" autocomplete="off" spellcheck="false" dir="ltr" />
+            <button class="btn ghost xs" id="btnPaste" type="button">لصق</button>
+          </div>
+          <button class="btn primary" id="btnConnect">
+            ربط وتشغيل العدّاد
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          </button>
+          <div class="form-error" id="formError"></div>
+          <div class="form-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6d6d86" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+            <span>التوكن ينحفظ في متصفحك فقط، ويُستخدم للاتصال بـ Streamlabs مباشرة — ما يمر على أي سيرفر وسيط.</span>
+          </div>
+          <div class="connect-alt">
+            <span>ما عندك توكن الآن؟</span>
+            <button id="btnDemo">شغّل الوضع التجريبي</button>
+          </div>
+          <div class="mini-chips">
+            <span>بدون تسجيل</span>
+            <span>بدون كود</span>
+            <span>توقف بأي وقت</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ المزايا ══════════ -->
+  <section class="features" id="features">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">المزايا</div>
+        <h2>كل شي تحتاجه… وما تحتاجه أقل</h2>
+        <p>بُنيت للبث المباشر: سريعة، خفيفة، وما تخرب على الشاشة.</p>
+      </div>
+      <div class="feat-grid">
+        <div class="feat reveal">
+          <div class="feat-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+          <h3>ربط في ٣٠ ثانية</h3>
+          <p>لصق توكن واحد، بدون OAuth معقّد ولا انتظار موافقات. أي ستريمر يقدر يبدأ بنفسه.</p>
+        </div>
+        <div class="feat reveal">
+          <div class="feat-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+          <h3>كل أنواع الدعم</h3>
+          <p>سبسكريب، جفت سب، بتس، دونيشن، وسوبر شات — كلها تزيد الوقت تلقائيًا.</p>
+        </div>
+        <div class="feat reveal">
+          <div class="feat-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+          <h3>أوفرلاي OBS جاهز</h3>
+          <p>رابط واحد تضيفه كمصدر متصفح، وخلفيته شفافة. يحدّث نفسه بدون أي إضافات.</p>
+        </div>
+        <div class="feat reveal">
+          <div class="feat-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <h3>الوقت ما يضيع</h3>
+          <p>العدّاد مبني على وقت مطلق، فلو تحدّثت الصفحة أو انقطع البث يرجع لنفس اللحظة.</p>
+        </div>
+        <div class="feat reveal">
+          <div class="feat-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"/><path d="M1 14h6M9 8h6M17 16h6"/></svg></div>
+          <h3>تحكم كامل</h3>
+          <p>قيم مخصّصة لكل حدث، حد أعلى للوقت، إيقاف مؤقت، وإضافة يدوية بالثانية.</p>
+        </div>
+        <div class="feat reveal">
+          <div class="feat-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.8-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.4l6.1-.8L12 3z"/></svg></div>
+          <h3>تصميم يليق بالبث</h3>
+          <p>حركات ناعمة، أرقام واضحة، وتنبيه أنيق لكل دعم — بدون ما يحجب اللعبة.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ كيف يعمل ══════════ -->
+  <section class="how" id="how">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">كيف يعمل</div>
+        <h2>من التوكن… إلى الشاشة</h2>
+      </div>
+      <div class="how-grid">
+        <div class="how-item reveal">
+          <div class="how-n">01</div>
+          <h3>اتصال مباشر</h3>
+          <p>المتصفح يفتح قناة WebSocket مع Streamlabs باستخدام توكِنك، ويستمع للأحداث لحظة بلحظة.</p>
+        </div>
+        <div class="how-item reveal">
+          <div class="how-n">02</div>
+          <h3>محرّك الوقت</h3>
+          <p>كل حدث يتحوّل لثواني حسب إعداداتك، وتُضاف لوقت الانتهاء مع منع التكرار المزدوج.</p>
+        </div>
+        <div class="how-item reveal">
+          <div class="how-n">03</div>
+          <h3>بثّ للأوفرلاي</h3>
+          <p>الحالة تُبثّ فورًا لصفحة الأوفرلاي المفتوحة في OBS، وتظهر مع تنبيه لكل داعم.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ دعوة ══════════ -->
+  <section class="band">
+    <div class="wrap">
+      <div class="band-in reveal">
+        <h2>جاهز تخلّي بثّك ما يوقف؟</h2>
+        <p>اربط حسابك وخلّ الجمهور هو اللي يحدد كم تطول.</p>
+        <button class="btn primary" data-scroll="#connect">ابدأ الآن — مجانًا</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ══════════ الفوتر ══════════ -->
+<footer class="footer" id="siteFooter">
+  <div class="wrap footer-in">
+    <div class="brand" style="font-size:15px">
+      <span class="brand-mark" style="width:26px;height:26px;border-radius:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.5l3.5 2"/></svg>
+      </span>
+      سابا · عدّاد سابثون
+    </div>
+    <div class="footer-links">
+      <a href="#connect">الربط</a>
+      <a href="#features">المزايا</a>
+      <a href="/watch" target="_blank">صفحة المشاهدين</a>
+    </div>
+    <span>غير مرتبط رسميًا بـ Streamlabs</span>
+  </div>
+</footer>
+
+<!-- ══════════ الاستوديو ══════════ -->
+<div class="studio" id="studio">
+  <div class="studio-bar">
+    <div class="brand" style="font-size:16px">
+      <span class="brand-mark" style="width:28px;height:28px;border-radius:9px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.5l3.5 2"/></svg>
+      </span>
+      <span>سابا</span>
+    </div>
+    <div class="room-pill">غرفة <b id="roomCode">----</b></div>
+    <div class="conn-pill" id="connPill"><span class="dot"></span><span id="connText">غير متصل</span></div>
+    <div class="spacer"></div>
+    <button class="btn ghost sm" id="btnOverlayLink">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/></svg>
+      رابط الأوفرلاي
+    </button>
+    <button class="btn ghost sm" id="btnSettings">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-1.8-.3 1.6 1.6 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.6 1.6 0 008 19.4a1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00.3-1.8 1.6 1.6 0 00-1.5-1H2a2 2 0 110-4h.1A1.6 1.6 0 004.6 8a1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H9a1.6 1.6 0 001-1.5V2a2 2 0 114 0v.1a1.6 1.6 0 001 1.5 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V9a1.6 1.6 0 001.5 1H22a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z"/></svg>
+      الإعدادات
+    </button>
+    <button class="btn ghost sm" id="btnExit">خروج</button>
+  </div>
+
+  <div class="studio-grid">
+    <section class="panel timer-panel">
+      <div class="panel-head" style="width:100%">
+        <h2>الوقت المتبقي</h2>
+        <span class="badge" id="stateBadge">متوقف</span>
+      </div>
+      <div class="timer-kicker"><span class="kdot"></span> سابثون مباشر</div>
+      <div class="big-timer" id="bigTimer" dir="ltr">00:00:00</div>
+      <div class="timer-sub">
+        <b id="addedTotal">٠ دقيقة</b>
+        <span>مضافة من الدعم</span>
+        <span style="color:#3a3a4d">·</span>
+        <span id="goalText">الهدف ٦ ساعات</span>
+      </div>
+      <div class="progress"><i id="progressFill"></i></div>
+
+      <div class="timer-actions">
+        <button class="btn primary" id="btnToggle">ابدأ العدّاد</button>
+        <button class="btn ghost" id="btnReset">تصفير</button>
+        <div class="quick">
+          <button data-add="60">+1د</button>
+          <button data-add="300">+5د</button>
+          <button data-add="600">+10د</button>
+          <input id="customAdd" type="number" min="1" placeholder="ث" />
+          <button id="btnCustomAdd">أضف</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel feed-panel">
+      <div class="panel-head">
+        <h2>آخر الدعم</h2>
+        <span class="badge" id="feedCount">٠</span>
+      </div>
+      <ul class="feed" id="feed">
+        <li class="feed-empty">لا يوجد دعم بعد — جرّب زر «+5د» أو شغّل الوضع التجريبي</li>
+      </ul>
+      <div class="stats">
+        <div class="stat"><b id="statSubs">٠</b><span>سبسكريب</span></div>
+        <div class="stat"><b id="statBits">٠</b><span>بتس</span></div>
+        <div class="stat"><b id="statDon">٠</b><span>دونيشن</span></div>
+        <div class="stat"><b id="statMin">٠</b><span>دقيقة</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ══════════ درج الإعدادات ══════════ -->
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3>إعدادات العدّاد</h3>
+    <button class="btn ghost xs" id="drawerClose">إغلاق</button>
+  </div>
+  <div class="drawer-body">
+    <div class="field-row">
+      <div class="field">
+        <label>وقت البداية (دقيقة)</label>
+        <input class="input" id="setStart" type="number" min="1" max="1440" />
+      </div>
+      <div class="field">
+        <label>الحد الأعلى (ساعة)</label>
+        <input class="input" id="setMax" type="number" min="1" max="72" />
+      </div>
+    </div>
+    <div class="field">
+      <label>كل سبسكريب (ثانية)</label>
+      <input class="input" id="setSub" type="number" min="0" />
+      <div class="hint">٣٠٠ ثانية = ٥ دقائق</div>
+    </div>
+    <div class="field">
+      <label>كل جفت سب (ثانية)</label>
+      <input class="input" id="setGift" type="number" min="0" />
+    </div>
+    <div class="field">
+      <label>كل ١٠٠ بتس (ثانية)</label>
+      <input class="input" id="setBits" type="number" min="0" />
+    </div>
+    <div class="field">
+      <label>كل وحدة عملة في الدونيشن (ثانية)</label>
+      <input class="input" id="setDon" type="number" min="0" />
+      <div class="hint">مثال: ٦٠ ثانية × ٢٥ ريال = ٢٥ دقيقة</div>
+    </div>
+    <div class="switch-row">
+      <span>صوت عند كل دعم</span>
+      <button class="switch" id="swSound" aria-label="صوت"></button>
+    </div>
+    <div class="switch-row">
+      <span>تنبيه على الشاشة (أوفرلاي)</span>
+      <button class="switch on" id="swAlert" aria-label="تنبيه"></button>
+    </div>
+    <div class="field" style="margin-top:18px">
+      <label>رابط الأوفرلاي لـ OBS</label>
+      <div class="token-field" style="margin-bottom:8px">
+        <input id="overlayUrl" readonly dir="ltr" style="font-size:11.5px" />
+        <button class="btn ghost xs" id="btnCopyOverlay">نسخ</button>
+      </div>
+      <div class="hint">أضفه في OBS كمصدر «Browser» بمقاس ٨٠٠×٢٠٠ وخلفية شفافة.</div>
+    </div>
+    <div class="field">
+      <label>رابط المشاهدين</label>
+      <div class="token-field" style="margin-bottom:8px">
+        <input id="watchUrl" readonly dir="ltr" style="font-size:11.5px" />
+        <button class="btn ghost xs" id="btnCopyWatch">نسخ</button>
+      </div>
+      <div class="hint">شاركه مع جمهورك — يفتحون الرابط ويشوفون العدّاد مباشرة.</div>
+    </div>
+    <div class="field">
+      <label>تغيير التوكن</label>
+      <input class="input" id="setToken" type="password" dir="ltr" placeholder="Socket API Token" />
+    </div>
+    <div class="drawer-note">
+      <b>ملاحظة:</b> الإعدادات تُحفظ محليًا في متصفحك. لو غيّرت التوكن، أعد الاتصال من الزر بالأسفل.
+    </div>
+    <button class="btn primary" id="btnReconnect" style="width:100%;margin-top:14px">إعادة الاتصال</button>
+    <button class="btn ghost" id="btnDemoToggle" style="width:100%;margin-top:8px">تشغيل الوضع التجريبي</button>
+  </div>
+</aside>
+
+<!-- ══════════ مودال الشرح ══════════ -->
+<div class="modal" id="helpModal">
+  <div class="modal-box" style="position:relative">
+    <button class="btn ghost xs modal-close" id="helpClose">✕</button>
+    <h3>كيف أطلع الـ Socket Token؟</h3>
+    <p>دقيقة واحدة، وبدون أي إعدادات تقنية.</p>
+
+    <div class="modal-step">
+      <span class="n">١</span>
+      <div>
+        <b>افتح لوحة Streamlabs</b>
+        <p>سجّل دخول بحسابك اللي عليه القناة.</p>
+        <a class="modal-link" href="https://streamlabs.com/dashboard#/settings/api-settings" target="_blank" rel="noopener">
+          فتح صفحة API Settings
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="modal-step">
+      <span class="n">٢</span>
+      <div>
+        <b>انزل لقسم Socket API Token</b>
+        <p>تلاقيه تحت الـ API Token العادي. اضغط <b>Copy</b> أو حدّد النص وانسخه.</p>
+      </div>
+    </div>
+    <div class="modal-step">
+      <span class="n">٣</span>
+      <div>
+        <b>ارجع هنا والصقه</b>
+        <p>بمجرد ما تضغط «ربط»، يبدأ الاتصال وتظهر حالة «متصل» بالأخضر.</p>
+      </div>
+    </div>
+    <div class="modal-step" style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.18)">
+      <span class="n" style="background:rgba(251,191,36,.16);color:#fcd34d">!</span>
+      <div>
+        <b>تنبيه أمني</b>
+        <p>التوكن يعطي وصول لبيانات حسابك. لا تشاركه مع أحد، ولو انسرّب أعد توليده من نفس الصفحة.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "saba-subathon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "سابا — عدّاد سابثون مباشر مربوط بـ Streamlabs (كل دعم يزيد الوقت)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["subathon", "streamlabs", "twitch", "timer", "overlay"],
+  "license": "MIT"
+}
