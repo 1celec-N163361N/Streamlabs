@@ -15,11 +15,11 @@ export const DEFAULTS = {
   alert: true,
   donationRules: [], // [{ amount: 5, seconds: 120 }]
   overlay: {
-    accent: '#8b5cf6',
+    accent: '#7fb79a',
     pos: 'bottom-center',
     scale: 1,
-    opacity: 0.72,
-    radius: 20,
+    opacity: 0.8,
+    radius: 4,
     label: true,
     live: true,
     toast: true,

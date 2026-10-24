@@ -230,15 +230,15 @@ function renderTimer() {
 }
 
 const AV_COLORS = {
-  sub: 'linear-gradient(135deg,#8b5cf6,#6d28d9)',
-  resub: 'linear-gradient(135deg,#7c3aed,#4c1d95)',
-  gift: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
-  bits: 'linear-gradient(135deg,#0891b2,#0e7490)',
-  donation: 'linear-gradient(135deg,#db2777,#9d174d)',
-  superchat: 'linear-gradient(135deg,#e11d48,#9f1239)',
-  follow: 'linear-gradient(135deg,#0d9488,#115e59)',
-  raid: 'linear-gradient(135deg,#ca8a04,#a16207)',
-  other: 'linear-gradient(135deg,#4b5563,#374151)',
+  sub: '#7fb79a',
+  resub: '#6aa88a',
+  gift: '#c9b98a',
+  bits: '#9db4c0',
+  donation: '#a83e2b',
+  superchat: '#c25a45',
+  follow: '#b8ae97',
+  raid: '#d9c187',
+  other: '#8d8676',
 };
 
 function feedNode(ev) {
@@ -1035,8 +1035,11 @@ function bind() {
 
   // المودال
   const modal = $('#helpModal');
-  $('#openHelp')?.addEventListener('click', () => modal.classList.add('on'));
-  $('#helpClose')?.addEventListener('click', () => modal.classList.remove('on'));
+  const openHelp = () => modal.classList.add('on');
+  const closeHelp = () => modal.classList.remove('on');
+  ['#openHelp', '#openHelpFooter'].forEach((sel) => $(sel)?.addEventListener('click', openHelp));
+  ['#helpClose', '#openHelpClose'].forEach((sel) => $(sel)?.addEventListener('click', closeHelp));
+  modal?.addEventListener('click', (e) => { if (e.target === modal) closeHelp(); });
   modal?.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('on'); });
 
   // اللصق والربط

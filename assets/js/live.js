@@ -11,15 +11,15 @@ const LOADED_AT = Date.now();
 let toastT = null;
 
 const AV_COLORS = {
-  sub: 'linear-gradient(135deg,#8b5cf6,#6d28d9)',
-  resub: 'linear-gradient(135deg,#7c3aed,#4c1d95)',
-  gift: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
-  bits: 'linear-gradient(135deg,#0891b2,#0e7490)',
-  donation: 'linear-gradient(135deg,#db2777,#9d174d)',
-  superchat: 'linear-gradient(135deg,#e11d48,#9f1239)',
-  follow: 'linear-gradient(135deg,#0d9488,#115e59)',
-  raid: 'linear-gradient(135deg,#ca8a04,#a16207)',
-  other: 'linear-gradient(135deg,#4b5563,#374151)',
+  sub: '#7fb79a',
+  resub: '#6aa88a',
+  gift: '#c9b98a',
+  bits: '#9db4c0',
+  donation: '#a83e2b',
+  superchat: '#c25a45',
+  follow: '#b8ae97',
+  raid: '#d9c187',
+  other: '#8d8676',
 };
 
 function setConn(ok, text) {
@@ -34,7 +34,7 @@ function hexToRgba(hex, alpha) {
   const h = String(hex || '').replace('#', '');
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const n = parseInt(full, 16);
-  if (Number.isNaN(n)) return `rgba(139, 92, 246, ${alpha})`;
+  if (Number.isNaN(n)) return `rgba(127, 183, 154, ${alpha})`;
   const r = (n >> 16) & 255;
   const g = (n >> 8) & 255;
   const b = n & 255;
@@ -45,11 +45,11 @@ function hexToRgba(hex, alpha) {
 function applyOverlay(o) {
   if (!o) return;
   const root = document.documentElement;
-  const accent = o.accent || '#8b5cf6';
+  const accent = o.accent || '#7fb79a';
   root.style.setProperty('--ov-accent', accent);
   root.style.setProperty('--ov-accent-soft', hexToRgba(accent, 0.5));
-  root.style.setProperty('--ov-opacity', String(o.opacity ?? 0.72));
-  root.style.setProperty('--ov-radius', `${o.radius ?? 20}px`);
+  root.style.setProperty('--ov-opacity', String(o.opacity ?? 0.8));
+  root.style.setProperty('--ov-radius', `${o.radius ?? 4}px`);
   root.style.setProperty('--ov-scale', String(o.scale ?? 1));
 
   const stage = $('#ovStage');
