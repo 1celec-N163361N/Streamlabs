@@ -4,51 +4,73 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>سابا — شاهد العدّاد</title>
+<meta name="description" content="تابع عدّاد السابثون لحظة بلحظة — الوقت المتبقي وكل دعم يزيده." />
+<meta name="theme-color" content="#07070c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%238b5cf6'/%3E%3Ccircle cx='16' cy='16' r='8' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M16 11v5l3.5 2' stroke='white' stroke-width='2' stroke-linecap='round' fill='none'/%3E%3C/svg%3E" />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/style.css" />
 </head>
-<body>
-<div class="aurora"><i></i><i></i><i></i></div>
-<div class="grain"></div>
+<body class="watch">
 
-<div class="watch-page">
-  <div class="watch-card">
-    <div class="watch-top">
-      <div class="brand" style="font-size:15px">
-        <span class="brand-mark" style="width:26px;height:26px;border-radius:8px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.5l3.5 2"/></svg>
-        </span>
-        سابا
-      </div>
-      <div class="conn-pill" id="wConn"><span class="dot"></span><span>جارٍ الاتصال</span></div>
+<div class="bg-fx" aria-hidden="true">
+  <span class="glow g1"></span>
+  <span class="glow g2"></span>
+  <span class="glow g3"></span>
+</div>
+
+<div class="watch-wrap">
+
+  <header class="watch-bar">
+    <a class="brand" href="./" aria-label="سابا — الصفحة الرئيسية">
+      <span class="brand-mark">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5.5l3.5 2" />
+        </svg>
+      </span>
+      سابا
+    </a>
+    <div class="conn-pill" id="wConn" role="status" aria-live="polite">
+      <span class="dot"></span><span>جارٍ الاتصال</span>
     </div>
+  </header>
 
+  <section class="watch-hero" aria-label="الوقت المتبقي">
+    <div class="watch-kicker"><span class="dot"></span>سابثون مباشر</div>
     <div class="watch-timer" id="watchTimer" dir="ltr">--:--:--</div>
-    <div class="watch-sub" id="watchSub">الوقت المتبقي على نهاية السابثون</div>
+    <p class="watch-sub" id="watchSub">الوقت المتبقي على نهاية السابثون</p>
+    <div class="watch-track" aria-hidden="true"><i id="watchBar"></i></div>
+  </section>
 
-    <div class="progress" style="width:100%;margin-bottom:22px"><i id="watchBar"></i></div>
+  <div class="watch-stats">
+    <div class="wstat"><b id="wSubs">٠</b><span>سبسكريب</span></div>
+    <div class="wstat"><b id="wBits">٠</b><span>بتس</span></div>
+    <div class="wstat"><b id="wDon">٠</b><span>دونيشن</span></div>
+    <div class="wstat"><b id="wMin">٠</b><span>دقيقة</span></div>
+  </div>
 
-    <div class="stats" style="margin:0 0 18px;border-top:0;padding-top:0">
-      <div class="stat"><b id="wSubs">٠</b><span>سبسكريب</span></div>
-      <div class="stat"><b id="wBits">٠</b><span>بتس</span></div>
-      <div class="stat"><b id="wDon">٠</b><span>دونيشن</span></div>
-      <div class="stat"><b id="wMin">٠</b><span>دقيقة</span></div>
+  <section class="watch-panel" aria-label="آخر الدعم">
+    <div class="watch-panel-head">
+      <h2>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 17l5-5 4 4 8-8" /><path d="M16 8h4v4" />
+        </svg>
+        آخر الدعم
+      </h2>
+      <span class="cnt" id="wCount">٠</span>
     </div>
-
-    <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;font-size:12.5px;color:#6d6d86">
-      <span>آخر الدعم</span>
-      <span id="wCount">٠</span>
-    </div>
-
-    <ul class="feed" id="wFeed" style="max-height:250px">
+    <ul class="feed" id="wFeed">
       <li class="feed-empty">بانتظار أول دعم…</li>
     </ul>
+  </section>
 
-    <div style="text-align:center;margin-top:20px;font-size:12px;color:#6d6d86">
-      الغرفة <span id="wRoom" style="font-family:var(--mono);color:#a2a2bb">----</span>
-    </div>
-  </div>
+  <footer class="watch-foot">
+    <span>الغرفة</span>
+    <code id="wRoom">----</code>
+  </footer>
+
 </div>
 
 <script type="module" src="assets/js/live.js"></script>

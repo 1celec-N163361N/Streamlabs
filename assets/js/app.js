@@ -17,6 +17,16 @@ function loadStore() {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch (_) { return {}; }
 }
 
+/** يولّد رمز دخول تلقائيًا عند أول دخول للاستوديو — بدون ما نوقف المستخدم بمودال */
+function ensurePin() {
+  if (state.pin) return;
+  state.pin = String(Math.floor(1000 + Math.random() * 9000));
+  saveLocal();
+  setTimeout(() => {
+    toast(`رمز الحماية جاهز: ${state.pin} — تقدر تشوفه أو تغيّره من الإعدادات`, 'ok');
+  }, 1500);
+}
+
 const saved = loadStore();
 const savedSettings = saved.settings || {};
 
@@ -108,6 +118,7 @@ function blip(seconds) {
 
 /* ─────────────── المزامنة مع السيرفر ─────────────── */
 let saveTimer = null;
+let pinPrompted = false;
 
 function snapshot() {
   state.lastSeen = Date.now();
@@ -167,6 +178,13 @@ function syncServer() {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ pin: state.pin, state: publicState() }),
+  }).then((res) => {
+    // الرمز المحفوظ ما يطابق رمز الغرفة (تبويب ثاني غيّره) → نطلب الدخول مرة واحدة
+    if (res && res.status === 403 && !pinPrompted) {
+      pinPrompted = true;
+      showLock('enter');
+    }
+    return res;
   }).catch(() => null);
 }
 
@@ -426,6 +444,7 @@ function setConn(kind, text) {
 }
 
 function enterStudio() {
+  ensurePin();
   $('#studio').classList.add('on');
   document.body.style.overflow = 'hidden';
   renderTimer();
@@ -633,6 +652,7 @@ async function submitLock() {
 
   if (lockMode === 'create') {
     state.pin = pin;
+    pinPrompted = false;
     saveLocal();
     hideLock();
     syncServer();
@@ -649,6 +669,7 @@ async function submitLock() {
     shakeLock();
     return;
   }
+  pinPrompted = false;
   saveLocal();
   hideLock();
 }
@@ -1250,8 +1271,9 @@ function bind() {
     toast('غرفة جديدة: ' + state.room, 'ok');
   });
 
-  // إضافة يدوية للوقت
-  $$('[data-add]').forEach((btn) => {
+  // إضافة يدوية للوقت — أزرار الدرج فقط (قيمها بالدقائق)
+  // ملاحظة: أزرار الاستوديو السريعة لها ربطها الخاص أعلاه وقيمها بالثواني
+  $$('#drawer [data-add]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const secs = Number(btn.dataset.add) * 60;
       const added = manualAdd(secs, 'إضافة يدوية من الاستوديو');
@@ -1366,9 +1388,8 @@ function boot() {
   const rc = $('#roomCode');
   if (rc) rc.textContent = state.room;
 
-  // القفل
-  if (state.pin) hideLock();
-  else showLock('enter');
+  // القفل: ما نوقف الزائر على الصفحة الرئيسية — الرمز يُنشأ تلقائيًا عند الدخول للاستوديو
+  hideLock();
 
   if (state.resumeGap > 3000) {
     setTimeout(() => {
