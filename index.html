@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>سابا — عدّاد سابثون يزيد مع كل دعم</title>
 <meta name="description" content="اربط Streamlabs مرة واحدة، وكل سبسكريب أو بتس أو دونيشن يزيد وقت البث لحظيًا. أوفرلاي OBS جاهز وبدون تسجيل." />
-<meta name="theme-color" content="#f3eee3" />
+<meta name="theme-color" content="#0c0a08" />
 <meta property="og:title" content="سابا — عدّاد سابثون مباشر" />
 <meta property="og:description" content="كل دعم يزيد وقت بثّك. ربط واحد مع Streamlabs وأوفرلاي جاهز لـ OBS." />
 <meta property="og:type" content="website" />
@@ -45,42 +45,43 @@
   <!-- ══════════ الهيرو ══════════ -->
   <section class="hero">
     <div class="wrap">
-      <div class="hero-top">
-        <div class="hero-copy">
-          <h1>كل دعم يزيد <span class="mark">وقت<svg class="mark-line" viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8.4C40 3.1 92 1.9 143 4.4c19 1 36 2.6 55 4.9" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg></span> بثّك</h1>
-          <p class="lead">
-            اربط Streamlabs مرة واحدة، وكل سبسكريب أو بتس أو دونيشن يضيف وقتًا على العدّاد لحظيًا.
-          </p>
-          <div class="hero-actions">
-            <button class="btn primary" data-scroll="#connect">
-              اربط Streamlabs
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-            </button>
-            <button class="btn ghost" id="btnDemoHero">شوف العرض التجريبي</button>
-          </div>
-          <p class="hero-note">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-            بدون تسجيل · التوكن يبقى في متصفحك
-          </p>
+      <div class="hero-head">
+        <span class="kicker"><span class="kdot"></span> بث مباشر · متصل بـ Streamlabs</span>
+        <h1>كل دعم يزيد <span class="mark">وقت<svg class="mark-line" viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 8.4C40 3.1 92 1.9 143 4.4c19 1 36 2.6 55 4.9" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/></svg></span> بثّك</h1>
+        <p class="lead">
+          اربط Streamlabs مرة واحدة، وكل سبسكريب أو بتس أو دونيشن يضيف وقتًا على العدّاد لحظيًا.
+        </p>
+        <div class="hero-actions">
+          <button class="btn primary" data-scroll="#connect">
+            اربط Streamlabs
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          </button>
+          <button class="btn ghost" id="btnDemoHero">شوف العرض التجريبي</button>
         </div>
-
-        <dl class="hero-spec">
-          <div><dt>المنصة</dt><dd>Streamlabs</dd></div>
-          <div><dt>التأخير</dt><dd>أقل من ثانية</dd></div>
-          <div><dt>الربط</dt><dd>30 ثانية</dd></div>
-          <div><dt>الأوفرلاي</dt><dd>OBS · Browser</dd></div>
-        </dl>
+        <p class="hero-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+          بدون تسجيل · التوكن يبقى في متصفحك
+        </p>
       </div>
 
-      <figure class="hero-plate">
-        <div class="plate-frame">
-          <img src="assets/img/studio.png" width="1440" height="900" alt="لوحة تحكم سابا داخل الاستوديو: العدّاد، آخر الدعم، وأزرار التحكم" />
+      <!-- المسرح: نفس العدّاد اللي يشتغل في بثّك -->
+      <div class="stage" id="stage" aria-label="عرض حي للعدّاد">
+        <svg class="stage-arch" viewBox="0 0 820 300" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M6 300C6 92 188 6 410 6s404 86 404 294" />
+          <path class="inner" d="M26 300C26 106 198 26 410 26s384 80 384 274" />
+        </svg>
+        <span class="stage-orn" aria-hidden="true"></span>
+        <div class="stage-feed" id="stageFeed" aria-hidden="true"></div>
+        <div class="stage-body">
+          <div class="stage-digits" id="stageDigits">24:00:00</div>
+          <div class="stage-bar"><i id="stageBar"></i></div>
+          <div class="stage-meta">
+            <span id="stageLast">آخر دعم —</span>
+            <span id="stageCount">0 دعم</span>
+            <span id="stageCap">السقف 24:00:00</span>
+          </div>
         </div>
-        <figcaption class="plate-cap">
-          <b>لوحة التحكم</b>
-          <span>غرفة 7F2A · بث مباشر</span>
-        </figcaption>
-      </figure>
+      </div>
     </div>
 
     <!-- شريط الإثبات -->
@@ -94,6 +95,25 @@
         </div>
         <p class="proof-stat">الربط يستغرق <b>30 ثانية</b> · بدون سيرفر وسيط</p>
       </div>
+    </div>
+  </section>
+
+  <!-- ══════════ لوحة الاستوديو ══════════ -->
+  <section class="showcase">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>هذي الشاشة اللي تشتغل عليها</h2>
+        <p>العدّاد، آخر الدعم، أزرار التحكم، والإعدادات — كلها في صفحة واحدة، بدون تبويبات ولا تنقّل.</p>
+      </div>
+      <figure class="showcase-frame">
+        <div class="plate-frame">
+          <img src="assets/img/studio.png" width="1600" height="1000" loading="lazy" decoding="async" alt="لوحة تحكم سابا داخل الاستوديو: العدّاد، آخر الدعم، وأزرار التحكم" />
+        </div>
+        <figcaption class="plate-cap">
+          <b>لوحة التحكم</b>
+          <span>غرفة 7F2A · بث مباشر</span>
+        </figcaption>
+      </figure>
     </div>
   </section>
 
@@ -243,26 +263,20 @@
       <div class="sec-head">
         <h2>ثلاث أشياء ما نتنازل عنها</h2>
       </div>
-      <div class="safety-grid">
-        <div class="safety-item">
-          <h3>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
-            التوكن يبقى عندك
-          </h3>
+      <div class="tenets">
+        <div class="tenet">
+          <span class="tenet-n">01</span>
+          <h3>التوكن يبقى عندك</h3>
           <p>يُخزَّن في متصفحك ويُستخدم للاتصال المباشر بـ Streamlabs. ما يُرسل لأي سيرفر، وتقدر تلغيه من لوحتهم في أي وقت.</p>
         </div>
-        <div class="safety-item">
-          <h3>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>
-            رمز دخول للاستوديو
-          </h3>
+        <div class="tenet">
+          <span class="tenet-n">02</span>
+          <h3>رمز دخول للاستوديو</h3>
           <p>أربعة أرقام تُنشأ مع الغرفة. لو انتشر رابط الاستوديو، ما أحد يقدر يعدّل العدّاد بدونها.</p>
         </div>
-        <div class="safety-item">
-          <h3>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1015-6.7"/><path d="M18 3v5h-5"/><path d="M12 8v4l2.5 1.5"/></svg>
-            يكمّل من حيث توقف
-          </h3>
+        <div class="tenet">
+          <span class="tenet-n">03</span>
+          <h3>يكمّل من حيث توقف</h3>
           <p>لو انسدّ التبويب أو انقطع النت، العدّاد ما يحسب وقت الغياب — يرجع لنفس الثانية اللي وقف عندها.</p>
         </div>
       </div>

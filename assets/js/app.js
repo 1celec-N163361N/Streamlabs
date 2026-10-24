@@ -1040,7 +1040,14 @@ function bind() {
   ['#openHelp', '#openHelpFooter'].forEach((sel) => $(sel)?.addEventListener('click', openHelp));
   ['#helpClose', '#openHelpClose'].forEach((sel) => $(sel)?.addEventListener('click', closeHelp));
   modal?.addEventListener('click', (e) => { if (e.target === modal) closeHelp(); });
-  modal?.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('on'); });
+
+  // Esc يقفل اللي مفتوح فوق الصفحة
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (modal?.classList.contains('on')) { closeHelp(); return; }
+    const dr = $('#drawer');
+    if (dr?.classList.contains('on')) dr.classList.remove('on');
+  });
 
   // اللصق والربط
   $('#btnPaste')?.addEventListener('click', async () => {
@@ -1382,9 +1389,123 @@ function pauseBeacon() {
   } catch (_) {}
 }
 
+/* ─────────────── مسرح الهيرو: عدّاد حي يقفز مع كل دعم ─────────────── */
+function initStage() {
+  const digits = $('#stageDigits');
+  const bar = $('#stageBar');
+  const feed = $('#stageFeed');
+  const lastEl = $('#stageLast');
+  const countEl = $('#stageCount');
+  const capEl = $('#stageCap');
+  const stage = $('#stage');
+  if (!digits || !stage) return;
+
+  const CAP = 24 * 3600;            // سقف العرض
+  let remain = 22 * 3600 + 41 * 60; // نقطة بداية واقعية
+  let added = 0;
+  let count = 0;
+  let slot = 0;
+  let lastAt = 0;
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const clock = (s) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+
+  function paintDigits() {
+    const s = Math.max(0, Math.floor(remain));
+    digits.innerHTML = `${pad(Math.floor(s / 3600))}<em>:</em>${pad(Math.floor((s % 3600) / 60))}<em>:</em>${pad(s % 60)}`;
+  }
+
+  function paintMeta() {
+    if (countEl) countEl.textContent = `${count} دعم`;
+    if (capEl) capEl.textContent = `+${(added / 3600).toFixed(1)} ساعة من الدعم`;
+    if (bar) bar.style.width = `${Math.min(100, (added / CAP) * 100).toFixed(2)}%`;
+  }
+
+  const NAMES = ['نورة', 'خالد', 'فيصل', 'لمى', 'عبدالله', 'سارة', 'ياسر', 'ريم', 'ماجد', 'هند', 'طلال', 'دانة'];
+  const GIFTS = [
+    { kind: 'دونيشن', note: '$25', secs: 1500 },
+    { kind: 'سبسكريب', note: 'Tier 1', secs: 300 },
+    { kind: 'هدية', note: '500 ماسة', secs: 600 },
+    { kind: 'بتس', note: '1000', secs: 900 },
+    { kind: 'دونيشن', note: '$5', secs: 300 },
+    { kind: 'متابعة', note: 'جديدة', secs: 60 },
+    { kind: 'سبسكريب', note: 'Tier 3', secs: 900 }
+  ];
+
+  function spawn() {
+    const g = GIFTS[Math.floor(Math.random() * GIFTS.length)];
+    const name = NAMES[Math.floor(Math.random() * NAMES.length)];
+    added += g.secs;
+    remain = Math.min(CAP, remain + g.secs);
+    count++;
+    lastAt = Date.now();
+
+    if (!feed || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      paintMeta();
+      return;
+    }
+
+    slot = (slot % 3) + 1;
+    const chip = document.createElement('span');
+    chip.className = `stage-chip p${slot}`;
+    chip.innerHTML = `<i></i><span>${name} · ${g.kind} <b>${g.note}</b></span><b>+${clock(g.secs)}</b>`;
+    // نستبدل الشريحة القديمة في نفس الموضع
+    const old = feed.querySelector(`.p${slot}`);
+    if (old) old.remove();
+    feed.appendChild(chip);
+
+    digits.classList.add('bump');
+    setTimeout(() => digits.classList.remove('bump'), 320);
+    paintMeta();
+  }
+
+  paintDigits();
+  paintMeta();
+  // نبدأ بشرائح موجودة بدل مسرح فاضي
+  spawn();
+  setTimeout(spawn, 1000);
+  setTimeout(spawn, 2000);
+
+  let tick = setInterval(() => {
+    remain = Math.max(0, remain - 1);
+    paintDigits();
+    if (lastAt && lastEl) {
+      const ago = Math.floor((Date.now() - lastAt) / 1000);
+      lastEl.textContent = `آخر دعم · قبل ${ago} ث`;
+    }
+  }, 1000);
+
+  let arrivals = setInterval(spawn, 3200);
+
+  // نوقف الحركة لما يطلع المسرح عن الشاشة أو التبويب ينطفي
+  const stop = () => { clearInterval(tick); clearInterval(arrivals); };
+  const start = () => {
+    stop();
+    tick = setInterval(() => {
+      remain = Math.max(0, remain - 1);
+      paintDigits();
+      if (lastAt && lastEl) {
+        lastEl.textContent = `آخر دعم · قبل ${Math.floor((Date.now() - lastAt) / 1000)} ث`;
+      }
+    }, 1000);
+    arrivals = setInterval(spawn, 3200);
+  };
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      entries.forEach((e) => (e.isIntersecting && !document.hidden ? start() : stop()));
+    }, { threshold: 0.15 }).observe(stage);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop();
+    else if (stage.getBoundingClientRect().top < window.innerHeight) start();
+  });
+}
+
 /* ─────────────── التشغيل ─────────────── */
 function boot() {
   bind();
+  initStage();
   updateUrls();
   renderIncoming();
   fillSettings();
